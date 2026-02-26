@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Atom } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
 
@@ -26,7 +26,7 @@ export default function MolarMassPage() {
             onClick={handleCalcMass}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
           >
-            <CheckCircle size={18} /> Calculate
+            <Atom size={18} /> Calculate Molar Mass
           </button>
         </div>
       </div>
