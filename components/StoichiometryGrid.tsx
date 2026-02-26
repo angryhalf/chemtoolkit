@@ -8,21 +8,45 @@ interface StoichiometryGridProps {
   products: Molecule[];
   coefficients: number[];
   knownMolIndex: number;
-  knownValue: number; // Grams
+  knownValue: number;
+  knownUnit: 'g' | 'mol' | 'molecules';
   knownIsReactant: boolean;
   targetMolIndex: number;
+  targetUnit: 'g' | 'molecules' | 'mol';
   targetIsReactant: boolean;
 }
+
+const AVOGADRO = 6.022e23;
 
 // Helper to safely render HTML formulas
 const Formula = ({ html }: { html: string }) => (
   <span dangerouslySetInnerHTML={{ __html: html }} />
 );
 
+// Helper to format numbers in proper scientific notation
+const formatScientific = (num: number) => {
+  if (num === 0) return "0";
+
+  // Get the standard exponential string (e.g., "3.764e+23")
+  const expString = num.toExponential(3);
+
+  // Split into coefficient and exponent
+  const [coefficient, exponent] = expString.split('e');
+
+  // Clean up the exponent (remove leading +, leading zeros)
+  const expVal = parseInt(exponent, 10);
+
+  return (
+    <span>
+      {coefficient} × 10<sup>{expVal}</sup>
+    </span>
+  );
+};
+
 export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   reactants, products, coefficients,
-  knownMolIndex, knownValue, knownIsReactant,
-  targetMolIndex, targetIsReactant
+  knownMolIndex, knownValue, knownUnit, knownIsReactant,
+  targetMolIndex, targetUnit, targetIsReactant
 }) => {
 
   const allMols = [...reactants, ...products];
@@ -31,7 +55,6 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   const molarMasses = allMols.map(m => calculateMolarMass(m).totalMass);
 
   // Identify Known and Target Data
-  const knownMass = knownValue;
   const knownMM = molarMasses[knownMolIndex];
   const knownCoeff = coefficients[knownMolIndex];
   const knownFormulaHtml = formatMolecule(allMols[knownMolIndex]);
@@ -40,10 +63,52 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   const targetMM = molarMasses[targetMolIndex];
   const targetFormulaHtml = formatMolecule(allMols[targetMolIndex]);
 
-  // Calculations
-  const knownMoles = knownMass / knownMM;
+  // --- Calculations ---
+
+  // Step 1: Convert Known Value to Known Moles
+  let knownMoles = 0;
+  let step1Top = <></>;
+  let step1Bottom = <></>;
+
+  if (knownUnit === 'mol') {
+    knownMoles = knownValue;
+    step1Top = <span className="text-blue-600 font-bold">{knownValue} mol</span>;
+    step1Bottom = <span>1 mol</span>;
+  } else if (knownUnit === 'g') {
+    knownMoles = knownValue / knownMM;
+    step1Top = <span className="text-blue-600 font-bold">{knownValue} g</span>;
+    step1Bottom = <span>{knownMM.toFixed(3)} g</span>;
+  } else { // molecules
+    knownMoles = knownValue / AVOGADRO;
+    step1Top = <span className="text-blue-600 font-bold">{formatScientific(knownValue)} molecules</span>;
+    step1Bottom = <span>6.022 × 10<sup>23</sup> molecules</span>;
+  }
+
+  // Step 2: Mole Ratio
   const targetMoles = knownMoles * (targetCoeff / knownCoeff);
-  const targetMass = targetMoles * targetMM;
+
+  // Step 3: Convert Target Moles to Target Unit
+  let targetValue = 0;
+  let step3Top = <></>;
+  let step3Bottom = <></>;
+  let unitLabel = '';
+
+  if (targetUnit === 'mol') {
+    targetValue = targetMoles;
+    step3Top = <span>1 mol</span>;
+    step3Bottom = <span className="text-teal-600 font-bold">1 mol</span>;
+    unitLabel = 'mol';
+  } else if (targetUnit === 'g') {
+    targetValue = targetMoles * targetMM;
+    step3Top = <span>{targetMM.toFixed(3)} g</span>;
+    step3Bottom = <span className="text-teal-600 font-bold">1 mol</span>;
+    unitLabel = 'g';
+  } else { // molecules
+    targetValue = targetMoles * AVOGADRO;
+    step3Top = <span>6.022 × 10<sup>23</sup> molecules</span>;
+    step3Bottom = <span className="text-teal-600 font-bold">1 mol</span>;
+    unitLabel = 'molecules';
+  }
 
   return (
     <div className="space-y-6">
@@ -79,85 +144,69 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
                 </td>
               ))}
             </tr>
-
-            <tr className="bg-white">
-              <td className="px-4 py-3 font-medium text-slate-900">Values</td>
-              {allMols.map((_, i) => {
-                const isKnown = i === knownMolIndex;
-                const isTarget = i === targetMolIndex;
-                return (
-                  <td
-                    key={i}
-                    className={`px-4 py-3 border-l border-slate-200 text-center font-semibold ${isKnown ? 'bg-blue-50 text-blue-700' :
-                        isTarget ? 'bg-green-50 text-green-700' : 'text-slate-400'
-                      }`}
-                  >
-                    {isKnown && `${knownMass} g`}
-                    {isTarget && `? g`}
-                    {!isKnown && !isTarget && '—'}
-                  </td>
-                );
-              })}
-            </tr>
           </tbody>
         </table>
       </div>
 
-      {/* 2. Dimensional Analysis Grid (Train Track Style) */}
+      {/* 2. Dimensional Analysis Grid */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Dimensional Analysis</h3>
 
         <div className="overflow-x-auto pb-2">
           <table className="w-full border-collapse text-center">
             <tbody>
-              {/* Row 1: Numerators (The "Given" and Top of Conversions) */}
               <tr>
-                {/* Given Value */}
-                <td className="px-2 py-2 min-w-[80px] font-bold text-slate-800 border-b-2 border-slate-300">
-                  {knownMass} g
+                {/* Step 1: Given Value */}
+                <td className="px-2 py-2 min-w-[100px] font-bold text-slate-800 border-b-2 border-slate-300">
+                  {step1Top}
                 </td>
 
-                {/* Conversion 1: Mass -> Moles */}
-                <td className="px-2 py-2 min-w-[80px] text-blue-600 font-bold border-b-2 border-slate-300">
-                  1 mol <Formula html={knownFormulaHtml} />
-                </td>
+                {/* Step 1: Conversion Factor (if not moles) */}
+                {knownUnit !== 'mol' && (
+                  <td className="px-2 py-2 min-w-[80px] text-blue-600 font-bold border-b-2 border-slate-300">
+                    1 mol <Formula html={knownFormulaHtml} />
+                  </td>
+                )}
 
-                {/* Conversion 2: Mole Ratio */}
+                {/* Step 2: Mole Ratio */}
                 <td className="px-2 py-2 min-w-[80px] text-indigo-600 font-bold border-b-2 border-slate-300">
                   {targetCoeff} mol <Formula html={targetFormulaHtml} />
                 </td>
 
-                {/* Conversion 3: Moles -> Mass */}
-                <td className="px-2 py-2 min-w-[80px] text-teal-600 font-bold border-b-2 border-slate-300">
-                  {targetMM.toFixed(3)} g
-                </td>
+                {/* Step 3: Conversion Factor (if not moles) */}
+                {targetUnit !== 'mol' && (
+                  <td className="px-2 py-2 min-w-[80px] text-teal-600 font-bold border-b-2 border-slate-300">
+                    {step3Top}
+                  </td>
+                )}
 
                 {/* Result */}
-                <td className="px-2 py-2 min-w-[80px] font-bold text-slate-800 border-b-2 border-slate-300">
-                  = {targetMass.toFixed(3)} g
+                <td className="px-2 py-2 min-w-[100px] font-bold text-slate-800 border-b-2 border-slate-300">
+                  = {targetUnit === 'molecules' ? formatScientific(targetValue) : targetValue.toFixed(3)} {unitLabel}
                 </td>
               </tr>
 
-              {/* Row 2: Denominators (The Units to Cancel) */}
+              {/* Denominator Row */}
               <tr>
-                <td className="px-2 py-2 min-w-[80px] h-8"></td> {/* Empty under given */}
+                <td className="px-2 py-2 h-8"></td>
 
-                {/* Denominator 1 */}
-                <td className="px-2 py-2 min-w-[80px] text-slate-500 font-medium">
-                  {knownMM.toFixed(3)} g
-                </td>
+                {knownUnit !== 'mol' && (
+                  <td className="px-2 py-2 text-slate-500 font-medium">
+                    {step1Bottom}
+                  </td>
+                )}
 
-                {/* Denominator 2 */}
-                <td className="px-2 py-2 min-w-[80px] text-slate-500 font-medium">
+                <td className="px-2 py-2 text-slate-500 font-medium">
                   {knownCoeff} mol <Formula html={knownFormulaHtml} />
                 </td>
 
-                {/* Denominator 3 */}
-                <td className="px-2 py-2 min-w-[80px] text-slate-500 font-medium">
-                  1 mol <Formula html={targetFormulaHtml} />
-                </td>
+                {targetUnit !== 'mol' && (
+                  <td className="px-2 py-2 text-slate-500 font-medium">
+                    {step3Bottom}
+                  </td>
+                )}
 
-                <td className="px-2 py-2 min-w-[80px]"></td> {/* Empty under result */}
+                <td></td>
               </tr>
             </tbody>
           </table>
@@ -165,17 +214,21 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
 
         {/* Explanation Steps */}
         <div className="mt-6 pt-4 border-t border-slate-100 space-y-3 text-sm text-slate-600">
-          <p><strong className="text-slate-700">1.</strong> Start with <span className="font-semibold">{knownMass} g</span> of <Formula html={knownFormulaHtml} />.</p>
-          <p><strong className="text-slate-700">2.</strong> Convert grams to moles using molar mass ({knownMM.toFixed(3)} g/mol).</p>
-          <p><strong className="text-slate-700">3.</strong> Use the mole ratio (<strong>{targetCoeff}:{knownCoeff}</strong>) to convert to moles of <Formula html={targetFormulaHtml} />.</p>
-          <p><strong className="text-slate-700">4.</strong> Convert moles to grams using molar mass ({targetMM.toFixed(3)} g/mol).</p>
+          <p><strong className="text-slate-700">1.</strong> Start with <span className="font-semibold">{knownUnit === 'molecules' ? formatScientific(knownValue) : knownValue} {knownUnit}</span> of <Formula html={knownFormulaHtml} />.</p>
+          {knownUnit !== 'mol' && (
+            <p><strong className="text-slate-700">2.</strong> Convert to moles using {knownUnit === 'g' ? `molar mass (${knownMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
+          )}
+          <p><strong className="text-slate-700">{knownUnit === 'mol' ? '2' : '3'}.</strong> Use the mole ratio (<strong>{targetCoeff}:{knownCoeff}</strong>) to convert to moles of <Formula html={targetFormulaHtml} />.</p>
+          {targetUnit !== 'mol' && (
+            <p><strong className="text-slate-700">{knownUnit === 'mol' && targetUnit !== 'mol' ? '3' : '4'}.</strong> Convert moles to {targetUnit} using {targetUnit === 'g' ? `molar mass (${targetMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
+          )}
         </div>
 
         {/* Final Result Box */}
         <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 text-center">
           <span className="text-sm text-slate-500 block mb-1">Final Answer</span>
           <span className="text-2xl font-bold text-slate-800">
-            {targetMass.toFixed(3)} g <Formula html={targetFormulaHtml} />
+            {targetUnit === 'molecules' ? formatScientific(targetValue) : targetValue.toFixed(3)} {targetUnit} <Formula html={targetFormulaHtml} />
           </span>
         </div>
       </div>

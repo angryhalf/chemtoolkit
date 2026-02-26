@@ -1,11 +1,10 @@
-import { Atom, Scale, Sigma, LucideIcon } from 'lucide-react';
+import { Atom, Scale, Sigma, LucideIcon, Beaker } from 'lucide-react';
 
 export interface NavItem {
     id: string;
     label: string;
     href: string;
     icon: LucideIcon;
-    // Custom color classes for active state
     activeColorClass: string;
     activeBgClass: string;
     activeBorderClass: string;
@@ -42,5 +41,15 @@ export const navigationConfig: NavItem[] = [
         activeBgClass: 'bg-teal-50',
         activeBorderClass: 'border-teal-100',
         activeIconColor: 'text-teal-600',
+    },
+    {
+        id: 'limiting-reactant',
+        label: 'Limiting Reactant',
+        href: '/limiting-reactant',
+        icon: Beaker,
+        activeColorClass: 'text-rose-700',
+        activeBgClass: 'bg-rose-50',
+        activeBorderClass: 'border-rose-100',
+        activeIconColor: 'text-rose-600',
     },
 ];

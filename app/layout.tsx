@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'ChemToolkit',
-  description: 'A simple, interactive toolkit for molar mass, balancing equations, and stoichiometry.',
+  description: 'A simple, interactive toolkit for molar mass, balancing chemical equations, stoichiometry, and finding limiting reactants.',
 };
 
 export default function RootLayout({
@@ -15,8 +15,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-slate-50 text-slate-800`}>
+    // Added h-full to html
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full m-0 p-0 bg-slate-50 text-slate-800`}>
         {children}
       </body>
     </html>
