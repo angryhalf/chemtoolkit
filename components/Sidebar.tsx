@@ -48,11 +48,6 @@ export const Sidebar = () => {
                     );
                 })}
             </nav>
-
-            {/* Footer */}
-            <div className="border-t border-slate-200 p-4">
-                <p className="text-xs text-slate-400 text-center">High School Chemistry Tools</p>
-            </div>
         </aside>
     );
 };
