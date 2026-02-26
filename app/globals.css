@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@layer utilities {
+
+  /* Orbit Animation */
+  @keyframes orbit {
+    0% {
+      transform: rotate(0deg) translateX(var(--orbit-radius)) rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg) translateX(var(--orbit-radius)) rotate(-360deg);
+    }
+  }
+
+  .animate-orbit {
+    animation: orbit 20s linear infinite;
+  }
+}
+
+/* Subscript/Superscript styling */
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sup {
+  top: -0.5em;
+}
+
+sub {
+  bottom: -0.25em;
+}
