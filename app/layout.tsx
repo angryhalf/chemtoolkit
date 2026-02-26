@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ChemToolkit | High School Chemistry Solver',
-  description: 'A simple, interactive toolkit for Molar Mass, Balancing Equations, and Stoichiometry.',
+  title: 'ChemToolkit',
+  description: 'A simple, interactive toolkit for molar mass, balancing equations, and stoichiometry.',
 };
 
 export default function RootLayout({
