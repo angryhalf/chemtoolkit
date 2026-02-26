@@ -36,7 +36,7 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">Molar Mass Calculator</h3>
             <p className="text-slate-500 text-sm leading-relaxed flex-grow">
-              Build molecules visually and instantly calculate total molar mass and percent composition with detailed breakdowns.
+              Instantly calculate the molar mass and percent composition of any molecule
             </p>
             <div className="mt-4 text-blue-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -48,9 +48,9 @@ export default function HomePage() {
             <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
               <Scale size={24} />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Equation Balancer</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Chemical Equation Balancer</h3>
             <p className="text-slate-500 text-sm leading-relaxed flex-grow">
-              Input your reactants and products to automatically balance chemical equations using algebraic methods.
+              Effortlessly balance any chemical equation in seconds
             </p>
             <div className="mt-4 text-indigo-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -64,7 +64,7 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">Stoichiometry Solver</h3>
             <p className="text-slate-500 text-sm leading-relaxed flex-grow">
-              Solve mass-to-mass problems easily. Get a textbook-style grid and dimensional analysis steps automatically.
+              Perform stoichiometry without hassle, with given dimensional analysis steps for guidance
             </p>
             <div className="mt-4 text-teal-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -76,9 +76,9 @@ export default function HomePage() {
             <div className="p-3 bg-rose-50 text-rose-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
               <Beaker size={24} />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Limiting Reactant</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Limiting Reactant Calculator</h3>
             <p className="text-slate-500 text-sm leading-relaxed flex-grow">
-              Find the limiting reactant in a reaction and calculate the theoretical yield of products formed.
+              Quickly find the limiting reactant in a reaction and the theoretical yield of products formed
             </p>
             <div className="mt-4 text-rose-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
