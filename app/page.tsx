@@ -12,7 +12,7 @@ export default function HomePage() {
         </h1>
 
         <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Stop struggling with manual calculations. Use our interactive toolkit to solve Molar Mass, Balance Equations, and perform Stoichiometry with detailed, step-by-step solutions.
+          Stop struggling with manual calculations. Use this interactive toolkit to solve for molar mass, balance chemical equations, and perform stoichiometry.
         </p>
 
         <div className="flex justify-center">
