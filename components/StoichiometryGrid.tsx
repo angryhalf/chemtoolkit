@@ -220,7 +220,8 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
           )}
           <p><strong className="text-slate-700">{knownUnit === 'mol' ? '2' : '3'}.</strong> Use the mole ratio (<strong>{targetCoeff}:{knownCoeff}</strong>) to convert to moles of <Formula html={targetFormulaHtml} />.</p>
           {targetUnit !== 'mol' && (
-            <p><strong className="text-slate-700">{knownUnit === 'mol' && targetUnit !== 'mol' ? '3' : '4'}.</strong> Convert moles to {targetUnit} using {targetUnit === 'g' ? `molar mass (${targetMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
+            // FIX: Removed redundant '&& targetUnit !== "mol"' check because we are already inside that condition
+            <p><strong className="text-slate-700">{knownUnit === 'mol' ? '3' : '4'}.</strong> Convert moles to {targetUnit} using {targetUnit === 'g' ? `molar mass (${targetMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
           )}
         </div>
 

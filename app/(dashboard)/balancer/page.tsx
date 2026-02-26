@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, ArrowRight, Trash2, Scale } from 'lucide-react';
+import { Plus, ArrowDown, Trash2, Scale } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, formatMolecule, balanceEquation } from '@/lib/chemistryEngine';
 
@@ -105,7 +105,7 @@ export default function BalancerPage() {
                 {/* Divider */}
                 <div className="flex items-center gap-4 my-4">
                     <div className="flex-grow border-t border-slate-200"></div>
-                    <ArrowRight className="text-slate-400" />
+                    <ArrowDown className="text-slate-400" />
                     <div className="flex-grow border-t border-slate-200"></div>
                 </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, ArrowRight, Trash2, Beaker } from 'lucide-react';
+import { Plus, ArrowDown, Trash2, Beaker } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { LimitingReactantResults } from '@/components/LimitingReactantResults';
 import { Molecule, formatMoleculePlainText } from '@/lib/chemistryEngine';
@@ -134,7 +134,7 @@ export default function LimitingReactantPage() {
                 {/* Divider */}
                 <div className="flex items-center gap-4 my-4">
                     <div className="flex-grow border-t border-slate-200"></div>
-                    <ArrowRight className="text-slate-400" />
+                    <ArrowDown className="text-slate-400" />
                     <div className="flex-grow border-t border-slate-200"></div>
                 </div>
 
