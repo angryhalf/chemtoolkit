@@ -78,7 +78,7 @@ export default function HomePage() {
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">Limiting Reactant Calculator</h3>
             <p className="text-slate-500 text-sm leading-relaxed flex-grow">
-              Quickly find the limiting reactant in a reaction and the theoretical yield of products formed
+              Quickly find the limiting reactant in a reaction and the percent yield of products formed
             </p>
             <div className="mt-4 text-rose-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
