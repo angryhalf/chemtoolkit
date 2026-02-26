@@ -7,11 +7,6 @@ export default function HomePage() {
     <AnimatedBackground>
       {/* Hero Section */}
       <div className="relative max-w-4xl mx-auto text-center py-20 lg:py-32 px-6">
-        <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm text-blue-700 border border-blue-100 rounded-full px-4 py-1.5 text-sm font-medium mb-6 shadow-sm">
-          <Sparkles size={14} />
-          Built for Students
-        </div>
-
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
           Chemistry Made <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Simple</span>
         </h1>
