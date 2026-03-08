@@ -1,240 +1,246 @@
-import { elementMap, Element } from '@/data/elements';
+import { elementMap } from '@/data/elements';
+import { AVOGADRO, Unit } from './utils';
 
-// --- Types ---
+export type { Unit };
+export type MoleculePart = { type: 'element'; symbol: string; count: number } | { type: 'group'; parts: MoleculePart[]; count: number };
+export interface Molecule { id: string; parts: MoleculePart[] }
+export interface CompositionResult { totalMass: number; composition: ElementComposition[]; steps: CalculationStep[]; }
+export interface ElementComposition { symbol: string; mass: number; percentage: number; count: number; atomicMass: number; }
+export interface BalanceResult { coefficients: number[]; balancedEquation: string; steps: CalculationStep[]; }
+export interface CalculationStep { text: string; type: 'info' | 'calculation' | 'result'; }
+export type BalanceError = { message: string; code: 'EMPTY_REACTANT' | 'EMPTY_PRODUCT' | 'EMPTY_MOLECULE' | 'INSUFFICIENT_MOLECULES' | 'UNBALANCEABLE' | 'UNKNOWN' };
 
-export type MoleculePart =
-    | { type: 'element'; symbol: string; count: number }
-    | { type: 'group'; parts: MoleculePart[]; count: number }; // For parentheses
+export type GasLaw = 'boyle' | 'charles' | 'combined';
 
-export interface Molecule {
-    id: string;
-    parts: MoleculePart[];
+export interface GasLawInput {
+  law: GasLaw;
+  pressure?: number;
+  volume?: number;
+  temperature?: number;
+  pressureUnit: 'atm' | 'kPa' | 'mmHg';
+  volumeUnit: 'L' | 'mL';
+  temperatureUnit: 'K' | 'C' | 'F';
+  p2?: number;
+  v2?: number;
+  t2?: number;
 }
 
-export interface CompositionResult {
-    totalMass: number;
-    composition: { symbol: string; mass: number; percentage: number; count: number; atomicMass: number }[];
-    steps: string[];
+export interface GasLawResult {
+  unknown: string;
+  value: number;
+  unit: string;
+  steps: CalculationStep[];
+  formula: string;
+  variables: { symbol: string; value: number; unit: string }[];
 }
 
-export interface BalanceResult {
-    coefficients: number[];
-    balancedEquation: string;
-    steps: string[];
-}
+const R = 0.082057; // L·atm/(mol·K)
 
-// --- Helpers ---
+const formatValue = (v: number): string => {
+  if (Math.abs(v) >= 1e6 || (Math.abs(v) < 1e-4 && v !== 0)) {
+    return v.toExponential(4);
+  }
+  return v.toFixed(4);
+};
 
-const getElementCountsRecursive = (parts: MoleculePart[], multiplier = 1): Map<string, number> => {
-    const counts = new Map<string, number>();
+export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
+  const { law, pressure, volume, temperature, pressureUnit, volumeUnit, temperatureUnit, p2, v2, t2 } = input;
+  
+  const toAtm = (p: number) => pressureUnit === 'atm' ? p : pressureUnit === 'kPa' ? p * 0.00986923 : p * 0.00131579;
+  const fromAtm = (a: number) => pressureUnit === 'atm' ? a : pressureUnit === 'kPa' ? a / 0.00986923 : a / 0.00131579;
+  const toL = (v: number) => volumeUnit === 'L' ? v : v * 0.001;
+  const fromL = (L: number) => volumeUnit === 'L' ? L : L / 0.001;
+  const toK = (t: number) => temperatureUnit === 'K' ? t : temperatureUnit === 'C' ? t + 273.15 : (t - 32) * 5/9 + 273.15;
+  const fromK = (K: number) => temperatureUnit === 'K' ? K : temperatureUnit === 'C' ? K - 273.15 : (K - 273.15) * 9/5 + 32;
 
-    parts.forEach(part => {
-        if (part.type === 'element') {
-            const current = counts.get(part.symbol) || 0;
-            counts.set(part.symbol, current + (part.count * multiplier));
-        } else if (part.type === 'group') {
-            const subCounts = getElementCountsRecursive(part.parts, part.count * multiplier);
-            subCounts.forEach((val, key) => {
-                const current = counts.get(key) || 0;
-                counts.set(key, current + val);
-            });
-        }
-    });
+  const P1 = pressure ? toAtm(pressure) : undefined;
+  const V1 = volume ? toL(volume) : undefined;
+  const T1 = temperature ? toK(temperature) : undefined;
+  const P2 = p2 ? toAtm(p2) : undefined;
+  const V2 = v2 ? toL(v2) : undefined;
+  const T2 = t2 ? toK(t2) : undefined;
 
+  const steps: CalculationStep[] = [];
+  let unknown = '';
+  let value = 0;
+  let formula = '';
+  let unit = '';
+  const variables: { symbol: string; value: number; unit: string }[] = [];
+
+  if (pressure !== undefined) variables.push({ symbol: 'P1', value: pressure, unit: pressureUnit });
+  if (volume !== undefined) variables.push({ symbol: 'V1', value: volume, unit: volumeUnit });
+  if (temperature !== undefined) variables.push({ symbol: 'T1', value: temperature, unit: temperatureUnit });
+  if (p2 !== undefined) variables.push({ symbol: 'P2', value: p2, unit: pressureUnit });
+  if (v2 !== undefined) variables.push({ symbol: 'V2', value: v2, unit: volumeUnit });
+  if (t2 !== undefined) variables.push({ symbol: 'T2', value: t2, unit: temperatureUnit });
+
+  switch (law) {
+    case 'boyle':
+      steps.push({ text: "Boyle's Law (P1V1 = P2V2)", type: 'info' });
+      if (P1 !== undefined && V1 !== undefined && P2 !== undefined) {
+        unknown = 'Final Volume (V2)';
+        unit = volumeUnit;
+        formula = 'P1V1 = P2V2';
+        const v2Calc = (P1 * V1) / P2;
+        steps.push({ text: `V2 = (P1 * V1) / P2`, type: 'calculation' });
+        steps.push({ text: `V2 = (${formatValue(P1)} * ${formatValue(V1)}) / ${formatValue(P2)}`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        value = fromL(v2Calc);
+      } else if (P1 !== undefined && V1 !== undefined && V2 !== undefined) {
+        unknown = 'Final Pressure (P2)';
+        unit = pressureUnit;
+        formula = 'P1V1 = P2V2';
+        const p2Calc = (P1 * V1) / V2;
+        steps.push({ text: `P2 = (P1 * V1) / V2`, type: 'calculation' });
+        steps.push({ text: `P2 = (${formatValue(P1)} * ${formatValue(V1)}) / ${formatValue(V2)}`, type: 'calculation' });
+        steps.push({ text: `P2 = ${formatValue(p2Calc)} atm`, type: 'result' });
+        value = fromAtm(p2Calc);
+      }
+      break;
+
+    case 'charles':
+      steps.push({ text: "Charles's Law (V1/T1 = V2/T2)", type: 'info' });
+      if (V1 !== undefined && T1 !== undefined && T2 !== undefined) {
+        unknown = 'Final Volume (V2)';
+        unit = volumeUnit;
+        formula = 'V1/T1 = V2/T2';
+        const v2Calc = (V1 * T2) / T1;
+        steps.push({ text: `V2 = (V1 * T2) / T1`, type: 'calculation' });
+        steps.push({ text: `V2 = (${formatValue(V1)} * ${formatValue(T2)} K) / ${formatValue(T1)} K`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        value = fromL(v2Calc);
+      } else if (V1 !== undefined && T1 !== undefined && V2 !== undefined) {
+        unknown = 'Final Temperature (T2)';
+        unit = temperatureUnit;
+        formula = 'V1/T1 = V2/T2';
+        const t2Calc = (V2 * T1) / V1;
+        steps.push({ text: `T2 = (V2 * T1) / V1`, type: 'calculation' });
+        steps.push({ text: `T2 = (${formatValue(V2)} * ${formatValue(T1)} K) / ${formatValue(V1)}`, type: 'calculation' });
+        steps.push({ text: `T2 = ${formatValue(t2Calc)} K`, type: 'result' });
+        value = fromK(t2Calc);
+      }
+      break;
+
+    case 'combined':
+      steps.push({ text: "Combined Gas Law ((P1V1)/T1 = (P2V2)/T2)", type: 'info' });
+      if (P1 !== undefined && V1 !== undefined && T1 !== undefined && P2 !== undefined && V2 !== undefined && T2 !== undefined) {
+        unknown = 'Final Temperature (T2)';
+        unit = temperatureUnit;
+        formula = '(P1V1)/T1 = (P2V2)/T2';
+        const t2Calc = (P2 * V2 * T1) / (P1 * V1);
+        steps.push({ text: `T2 = (P2 * V2 * T1) / (P1 * V1)`, type: 'calculation' });
+        steps.push({ text: `T2 = (${formatValue(P2)} * ${formatValue(V2)} * ${formatValue(T1)}) / (${formatValue(P1)} * ${formatValue(V1)})`, type: 'calculation' });
+        steps.push({ text: `T2 = ${formatValue(t2Calc)} K`, type: 'result' });
+        value = fromK(t2Calc);
+      } else if (P1 !== undefined && V1 !== undefined && T1 !== undefined && P2 !== undefined && T2 !== undefined) {
+        unknown = 'Final Volume (V2)';
+        unit = volumeUnit;
+        formula = '(P1V1)/T1 = (P2V2)/T2';
+        const v2Calc = (P1 * V1 * T2) / (P2 * T1);
+        steps.push({ text: `V2 = (P1 * V1 * T2) / (P2 * T1)`, type: 'calculation' });
+        steps.push({ text: `V2 = (${formatValue(P1)} * ${formatValue(V1)} * ${formatValue(T2)} K) / (${formatValue(P2)} * ${formatValue(T1)} K)`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        value = fromL(v2Calc);
+      } else if (P1 !== undefined && V1 !== undefined && T1 !== undefined && V2 !== undefined && T2 !== undefined) {
+        unknown = 'Final Pressure (P2)';
+        unit = pressureUnit;
+        formula = '(P1V1)/T1 = (P2V2)/T2';
+        const p2Calc = (P1 * V1 * T2) / (V2 * T1);
+        steps.push({ text: `P2 = (P1 * V1 * T2) / (V2 * T1)`, type: 'calculation' });
+        steps.push({ text: `P2 = (${formatValue(P1)} * ${formatValue(V1)} * ${formatValue(T2)} K) / (${formatValue(V2)} * ${formatValue(T1)} K)`, type: 'calculation' });
+        steps.push({ text: `P2 = ${formatValue(p2Calc)} atm`, type: 'result' });
+        value = fromAtm(p2Calc);
+      }
+      break;
+  }
+
+  return { unknown, value, unit, steps, formula, variables };
+};
+
+const getLawName = (law: GasLaw): string => {
+  const names: Record<GasLaw, string> = {
+    boyle: "Boyle's",
+    charles: "Charles's",
+    combined: 'Combined Gas',
+  };
+  return names[law];
+};
+
+const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
+
+const getCounts = (parts: MoleculePart[], mult = 1, counts = new Map<string, number>()): Map<string, number> => {
+    parts.forEach(p => p.type === 'element' 
+        ? counts.set(p.symbol, (counts.get(p.symbol) || 0) + p.count * mult)
+        : getCounts(p.parts, p.count * mult, counts));
     return counts;
 };
 
-const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
-const lcm = (a: number, b: number): number => (a * b) / gcd(a, b);
+const simplifyCoeffs = (c: number[]) => { const g = c.reduce(gcd); return c.map(x => x / g); };
 
-// --- Molar Mass Logic ---
-
-export const calculateMolarMass = (molecule: Molecule): CompositionResult => {
-    const counts = getElementCountsRecursive(molecule.parts);
+export const calculateMolarMass = (mol: Molecule): CompositionResult => {
+    const counts = getCounts(mol.parts);
+    const composition: ElementComposition[] = [];
+    const steps: CalculationStep[] = [{ text: '1. Identify elements and their counts.', type: 'info' }];
     let totalMass = 0;
-    const composition: CompositionResult['composition'] = [];
-    const steps: string[] = [];
 
-    steps.push(`1. Identify elements and their counts.`);
-
-    counts.forEach((count, symbol) => {
-        const el = elementMap.get(symbol);
-        if (el) {
-            const mass = el.mass * count;
-            totalMass += mass;
-            composition.push({ symbol, mass, count, atomicMass: el.mass, percentage: 0 });
-            steps.push(`   - ${symbol}: ${count} atom(s) × ${el.mass} g/mol = ${mass.toFixed(3)} g/mol`);
-        }
+    counts.forEach((count, sym) => {
+        const el = elementMap.get(sym);
+        if (!el) return;
+        const mass = el.mass * count;
+        totalMass += mass;
+        composition.push({ symbol: sym, mass, count, atomicMass: el.mass, percentage: 0 });
+        steps.push({ text: `   - ${sym}: ${count} × ${el.mass} = ${mass.toFixed(3)} g/mol`, type: 'calculation' });
     });
 
-    steps.push(`2. Sum subtotals to get Total Molar Mass.`);
-    steps.push(`   Total = ${totalMass.toFixed(3)} g/mol`);
-
-    steps.push(`3. Calculate percent composition.`);
-    composition.forEach(c => {
-        c.percentage = (c.mass / totalMass) * 100;
-        steps.push(`   - ${c.symbol}: (${c.mass.toFixed(3)} / ${totalMass.toFixed(3)}) × 100% = ${c.percentage.toFixed(2)}%`);
-    });
-
+    steps.push({ text: '2. Sum subtotals to get Total Molar Mass.', type: 'info' });
+    steps.push({ text: `   Total = ${totalMass.toFixed(3)} g/mol`, type: 'result' });
+    steps.push({ text: '3. Calculate percent composition.', type: 'info' });
+    composition.forEach(c => { c.percentage = (c.mass / totalMass) * 100; steps.push({ text: `   - ${c.symbol}: (${c.mass.toFixed(3)} / ${totalMass.toFixed(3)}) × 100 = ${c.percentage.toFixed(2)}%`, type: 'calculation' }); });
     return { totalMass, composition, steps };
 };
 
-// --- Equation Balancing Logic (Algebraic Method) ---
-
-// Parses a molecule structure into a simple map of element counts
-const parseMoleculeToMap = (molecule: Molecule): Map<string, number> => {
-    return getElementCountsRecursive(molecule.parts);
+const checkBalanced = (r: Molecule[], p: Molecule[], c: number[]): boolean => {
+    const bal = new Map<string, number>();
+    r.forEach((m, i) => getCounts(m.parts).forEach((v, el) => bal.set(el, (bal.get(el) || 0) + v * c[i])));
+    p.forEach((m, i) => getCounts(m.parts).forEach((v, el) => bal.set(el, (bal.get(el) || 0) - v * c[r.length + i])));
+    return ![...bal.values()].some(v => v !== 0);
 };
 
-export const balanceEquation = (reactants: Molecule[], products: Molecule[]): BalanceResult | Error => {
-    // 1. Gather all unique elements
-    const elementsSet = new Set<string>();
-    const allMols = [...reactants, ...products];
-
-    allMols.forEach(m => {
-        const map = parseMoleculeToMap(m);
-        map.forEach((_, el) => elementsSet.add(el));
-    });
-
-    const elements = Array.from(elementsSet);
-    const numVariables = allMols.length;
-    const numEquations = elements.length;
-
-    // 2. Build Matrix
-    // Rows: Elements, Cols: Molecules
-    // Reactants: Positive coeffs, Products: Negative coeffs (moving to one side)
-    // Equation: Sum(R_i * x_i) - Sum(P_j * x_j) = 0
-
-    const matrix: number[][] = [];
-
-    elements.forEach(el => {
-        const row: number[] = new Array(numVariables).fill(0);
-        reactants.forEach((mol, idx) => {
-            const map = parseMoleculeToMap(mol);
-            row[idx] = map.get(el) || 0;
-        });
-        products.forEach((mol, idx) => {
-            const map = parseMoleculeToMap(mol);
-            row[reactants.length + idx] = -(map.get(el) || 0);
-        });
-        matrix.push(row);
-    });
-
-    // 3. Solve using Gauss-Jordan Elimination for Null Space approximation
-    // This is a simplified solver for high school level equations.
-    // We set the last variable (free variable) to a tentative value, solve, then find LCM to get integers.
-
-    const steps: string[] = [];
-    steps.push("1. Set up system of equations:");
-
-    // Heuristic solver:
-    // We will try to find the smallest integer solution.
-    // This simplified brute-force for small equations (A-B-C logic) or basic matrix ops is sufficient for the prompt scope.
-    // Implementing a full null-space solver in JS is verbose. 
-    // We will use a heuristic: set coefficient of first molecule to 1, solve linear system, then multiply by denominators.
-
-    if (numVariables < 2) return new Error("Need at least two molecules.");
-
-    const tempCoeffs = new Array(numVariables).fill(1); // Start with all 1s
-    // This simple implementation calculates the "balance" ratio based on the first element found.
-    // For a production app, a proper matrix library like 'mathjs' is recommended.
-    // Below is a custom simplified solver for demonstration:
-
-    try {
-        // Construct augmented matrix for solving variables relative to the first one (index 0)
-        // We assume coefficient[0] = 1. We solve for the rest.
-        // R1: 2H + O -> H2O => 2x + 16y = 18z => Matrix logic is complex to hard-code.
-
-        // Alternative: Iterative approach for small integer coefficients (Max coefficient 10).
-        // This works perfectly for high school chem.
-        const maxCoeff = 10;
-        const solution = findSolutionDFS(reactants, products, elements, maxCoeff);
-        if (!solution) return new Error("Could not balance equation (or coefficients too high).");
-
-        steps.push(`2. Solved via integer search.`);
-
-        // Format output
-        const formattedReactants = reactants.map((r, i) => `${solution[i] > 1 ? solution[i] : ''}${formatMolecule(r)}`).join(' + ');
-        const formattedProducts = products.map((p, i) => `${solution[reactants.length + i] > 1 ? solution[reactants.length + i] : ''}${formatMolecule(p)}`).join(' + ');
-
-        return {
-            coefficients: solution,
-            balancedEquation: `${formattedReactants} → ${formattedProducts}`,
-            steps
-        };
-
-    } catch (e: any) {
-        return new Error(e.message || "Balancing failed.");
-    }
-};
-
-// Simple DFS solver for integer coefficients
-const findSolutionDFS = (
-    reactants: Molecule[],
-    products: Molecule[],
-    elements: string[],
-    max: number,
-    current: number[] = []
-): number[] | null => {
-
-    const totalMols = reactants.length + products.length;
-    if (current.length === totalMols) {
-        // Check if valid
-        const balances = new Map<string, number>();
-
-        reactants.forEach((mol, i) => {
-            const counts = parseMoleculeToMap(mol);
-            counts.forEach((val, el) => balances.set(el, (balances.get(el) || 0) + val * current[i]));
-        });
-
-        products.forEach((mol, i) => {
-            const counts = parseMoleculeToMap(mol);
-            counts.forEach((val, el) => balances.set(el, (balances.get(el) || 0) - val * current[reactants.length + i]));
-        });
-
-        let isBalanced = true;
-        balances.forEach(val => {
-            if (val !== 0) isBalanced = false;
-        });
-
-        // Simplify coefficients by dividing by GCD
-        if (isBalanced) {
-            const g = current.reduce((acc, val) => gcd(acc, val));
-            return current.map(x => x / g);
-        }
-        return null;
-    }
-
-    for (let i = 1; i <= max; i++) {
-        const result = findSolutionDFS(reactants, products, elements, max, [...current, i]);
-        if (result) return result;
-    }
-
+const findSolution = (r: Molecule[], p: Molecule[], max: number, curr: number[] = [], depth = 0): number[] | null => {
+    const total = r.length + p.length;
+    if (curr.length === total) return checkBalanced(r, p, curr) ? simplifyCoeffs(curr) : null;
+    if (depth > 0 && checkBalanced(r, p, [...curr, ...Array(total - curr.length).fill(1)])) return null;
+    for (let i = 1; i <= max; i++) { const res = findSolution(r, p, max, [...curr, i], depth + 1); if (res) return res; }
     return null;
 };
 
-// --- Formatting ---
+export const balanceEquation = (reactants: Molecule[], products: Molecule[]): { success: true; data: BalanceResult } | { success: false; error: BalanceError } => {
+    const validators = [
+        [!reactants.length, "Must have at least one reactant.", 'EMPTY_REACTANT'],
+        [!products.length, "Must have at least one product.", 'EMPTY_PRODUCT'],
+        [[...reactants, ...products].some(m => !m.parts.length), "All molecules must contain at least one element.", 'EMPTY_MOLECULE'],
+        [reactants.length + products.length < 2, "Need at least two molecules.", 'INSUFFICIENT_MOLECULES']
+    ];
+    const fail = validators.find(v => v[0]);
+    if (fail) return { success: false, error: { message: fail[1] as string, code: fail[2] as BalanceError['code'] } };
 
-export const formatMolecule = (molecule: Molecule): string => {
-    const formatPart = (part: MoleculePart): string => {
-        if (part.type === 'element') {
-            return part.count > 1 ? `${part.symbol}<sub>${part.count}</sub>` : part.symbol;
-        } else {
-            const inner = part.parts.map(formatPart).join('');
-            return part.count > 1 ? `(${inner})<sub>${part.count}</sub>` : `(${inner})`;
-        }
-    };
-    return molecule.parts.map(formatPart).join('');
+    const solution = findSolution(reactants, products, 12);
+    if (!solution) return { success: false, error: { message: "Could not balance equation. Try a simpler equation.", code: 'UNBALANCEABLE' } };
+
+    const fmt = (m: Molecule, i: number, o = 0) => `${solution[i + o] > 1 ? solution[i + o] : ''}${formatMolecule(m)}`;
+    return { success: true, data: { coefficients: solution, balancedEquation: `${reactants.map((r, i) => fmt(r, i)).join(' + ')} → ${products.map((p, i) => fmt(p, i, reactants.length)).join(' + ')}`, steps: [{ text: "1. Set up system of equations:", type: 'info' }, { text: "2. Solved via integer search.", type: 'result' }] } };
 };
 
-export const formatMoleculePlainText = (molecule: Molecule): string => {
-    const formatPart = (part: MoleculePart): string => {
-        if (part.type === 'element') {
-            return part.count > 1 ? `${part.symbol}${part.count}` : part.symbol;
-        } else {
-            const inner = part.parts.map(formatPart).join('');
-            return part.count > 1 ? `(${inner})${part.count}` : `(${inner})`;
-        }
-    };
-    return molecule.parts.map(formatPart).join('');
+const formatPart = (p: MoleculePart, sub = true): string => {
+    const s = p.count > 1 ? (sub ? `<sub>${p.count}</sub>` : `${p.count}`) : '';
+    return p.type === 'element' ? p.symbol + s : (p.parts.map(c => formatPart(c, sub)).join('') + (p.count > 1 ? `(${s})` : ''));
 };
+
+export const formatMolecule = (m: Molecule): string => m.parts.map(p => formatPart(p, true)).join('');
+export const formatMoleculePlainText = (m: Molecule): string => m.parts.map(p => formatPart(p, false)).join('');
+export const getMoleculeFormula = formatMoleculePlainText;
+export const getMoleculeMass = (m: Molecule): number => calculateMolarMass(m).totalMass;
+
+const yieldMult = { g: (m: number, mm: number) => m * mm, mol: (m: number) => m, molecules: (m: number) => m * AVOGADRO };
+export const calculateYield = (limMoles: number, tCoeff: number, lCoeff: number, tMM: number, tUnit: Unit): number => 
+    yieldMult[tUnit](limMoles * (tCoeff / lCoeff), tMM);

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer utilities {
 
   /* Orbit Animation */
@@ -33,4 +35,10 @@ sup {
 
 sub {
   bottom: -0.25em;
+}
+
+/* Dark mode transitions */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 200ms;
 }

@@ -1,4 +1,4 @@
-import { Atom, Scale, Sigma, LucideIcon, Beaker } from 'lucide-react';
+import { Atom, Scale, Sigma, LucideIcon, Beaker, Wind } from 'lucide-react';
 
 export interface NavItem {
     id: string;
@@ -51,5 +51,15 @@ export const navigationConfig: NavItem[] = [
         activeBgClass: 'bg-rose-50',
         activeBorderClass: 'border-rose-100',
         activeIconColor: 'text-rose-600',
+    },
+    {
+        id: 'gas-laws',
+        label: 'Gas Laws',
+        href: '/gas-laws',
+        icon: Wind,
+        activeColorClass: 'text-violet-700',
+        activeBgClass: 'bg-violet-50',
+        activeBorderClass: 'border-violet-100',
+        activeIconColor: 'text-violet-600',
     },
 ];

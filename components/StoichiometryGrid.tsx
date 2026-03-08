@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { Molecule, formatMolecule, calculateMolarMass } from '@/lib/chemistryEngine';
+import { AVOGADRO } from '@/lib/utils';
+import { formatScientific } from '@/lib/utils';
+import { Formula } from '@/components/Formula';
 
 interface StoichiometryGridProps {
   reactants: Molecule[];
@@ -10,59 +13,32 @@ interface StoichiometryGridProps {
   knownMolIndex: number;
   knownValue: number;
   knownUnit: 'g' | 'mol' | 'molecules';
-  knownIsReactant: boolean;
   targetMolIndex: number;
   targetUnit: 'g' | 'molecules' | 'mol';
-  targetIsReactant: boolean;
 }
 
-const AVOGADRO = 6.02e23;
-
-// Helper to safely render HTML formulas
-const Formula = ({ html }: { html: string }) => (
-  <span dangerouslySetInnerHTML={{ __html: html }} />
-);
-
-// Helper to format numbers in proper scientific notation
-const formatScientific = (num: number) => {
-  if (num === 0) return "0";
-  const expString = num.toExponential(3);
-  const [coefficient, exponent] = expString.split('e');
-  const expVal = parseInt(exponent, 10);
-
-  return (
-    <span>
-      {coefficient} × 10<sup>{expVal}</sup>
-    </span>
-  );
-};
+const getFormulaHtml = (molecule: Molecule): string => formatMolecule(molecule);
 
 export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   reactants, products, coefficients,
-  knownMolIndex, knownValue, knownUnit, knownIsReactant,
-  targetMolIndex, targetUnit, targetIsReactant
+  knownMolIndex, knownValue, knownUnit,
+  targetMolIndex, targetUnit
 }) => {
 
   const allMols = [...reactants, ...products];
-
-  // Calculate molar masses
   const molarMasses = allMols.map(m => calculateMolarMass(m).totalMass);
 
-  // Identify Known and Target Data
   const knownMM = molarMasses[knownMolIndex];
   const knownCoeff = coefficients[knownMolIndex];
-  const knownFormulaHtml = formatMolecule(allMols[knownMolIndex]);
+  const knownFormulaHtml = getFormulaHtml(allMols[knownMolIndex]);
 
   const targetCoeff = coefficients[targetMolIndex];
   const targetMM = molarMasses[targetMolIndex];
-  const targetFormulaHtml = formatMolecule(allMols[targetMolIndex]);
+  const targetFormulaHtml = getFormulaHtml(allMols[targetMolIndex]);
 
-  // --- Calculations ---
-
-  // Step 1: Convert Known Value to Known Moles
   let knownMoles = 0;
-  let step1Top = <></>;
-  let step1Bottom = <></>;
+  let step1Top: React.ReactNode = null;
+  let step1Bottom: React.ReactNode = null;
 
   if (knownUnit === 'mol') {
     knownMoles = knownValue;
@@ -72,19 +48,17 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
     knownMoles = knownValue / knownMM;
     step1Top = <span className="text-blue-600 font-bold">{knownValue} g <Formula html={knownFormulaHtml} /></span>;
     step1Bottom = <span>{knownMM.toFixed(3)} g <Formula html={knownFormulaHtml} /></span>;
-  } else { // molecules
+  } else {
     knownMoles = knownValue / AVOGADRO;
     step1Top = <span className="text-blue-600 font-bold">{formatScientific(knownValue)} molecules <Formula html={knownFormulaHtml} /></span>;
     step1Bottom = <span>6.02 × 10<sup>23</sup> molecules <Formula html={knownFormulaHtml} /></span>;
   }
 
-  // Step 2: Mole Ratio
   const targetMoles = knownMoles * (targetCoeff / knownCoeff);
 
-  // Step 3: Convert Target Moles to Target Unit
   let targetValue = 0;
-  let step3Top = <></>;
-  let step3Bottom = <></>;
+  let step3Top: React.ReactNode = null;
+  let step3Bottom: React.ReactNode = null;
   let unitLabel = '';
 
   if (targetUnit === 'mol') {
@@ -97,14 +71,13 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
     step3Top = <span>{targetMM.toFixed(3)} g <Formula html={targetFormulaHtml} /></span>;
     step3Bottom = <span className="text-teal-600 font-bold">1 mol <Formula html={targetFormulaHtml} /></span>;
     unitLabel = 'g';
-  } else { // molecules
+  } else {
     targetValue = targetMoles * AVOGADRO;
     step3Top = <span>6.02 × 10<sup>23</sup> molecules <Formula html={targetFormulaHtml} /></span>;
     step3Bottom = <span className="text-teal-600 font-bold">1 mol <Formula html={targetFormulaHtml} /></span>;
     unitLabel = 'molecules';
   }
 
-  // Helper for Cell Classes
   const cellClass = "px-4 py-3 text-center align-middle border-r-2 border-slate-200 last:border-r-0";
 
   return (
@@ -118,7 +91,7 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
               <th className="px-4 py-3 w-32 font-semibold">Property</th>
               {allMols.map((m, i) => (
                 <th key={i} className="px-4 py-3 border-l border-slate-200 text-center">
-                  <Formula html={formatMolecule(m)} />
+                  <Formula html={getFormulaHtml(m)} />
                 </th>
               ))}
             </tr>
@@ -154,31 +127,26 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
             <tbody>
               {/* Top Row: Numerators */}
               <tr>
-                {/* Step 1: Given Value */}
                 <td className={`${cellClass} font-bold text-slate-800 border-b-2 border-slate-300`}>
                   {step1Top}
                 </td>
 
-                {/* Step 1: Conversion Factor (if not moles) */}
                 {knownUnit !== 'mol' && (
                   <td className={`${cellClass} text-blue-600 font-bold border-b-2 border-slate-300`}>
                     1 mol <Formula html={knownFormulaHtml} />
                   </td>
                 )}
 
-                {/* Step 2: Mole Ratio */}
                 <td className={`${cellClass} text-indigo-600 font-bold border-b-2 border-slate-300`}>
                   {targetCoeff} mol <Formula html={targetFormulaHtml} />
                 </td>
 
-                {/* Step 3: Conversion Factor (if not moles) */}
                 {targetUnit !== 'mol' && (
                   <td className={`${cellClass} text-teal-600 font-bold border-b-2 border-slate-300`}>
                     {step3Top}
                   </td>
                 )}
 
-                {/* Result */}
                 <td className={`${cellClass} font-bold text-slate-800 border-b-2 border-slate-300`}>
                   = {targetUnit === 'molecules' ? formatScientific(targetValue) : targetValue.toFixed(3)} {unitLabel}
                 </td>

@@ -1,42 +1,25 @@
 "use client";
 
 import React from 'react';
-import { Molecule, formatMolecule, calculateMolarMass } from '@/lib/chemistryEngine';
+import { Molecule, formatMolecule, calculateMolarMass, Unit } from '@/lib/chemistryEngine';
+import { AVOGADRO } from '@/lib/utils';
+import { convertToMoles, formatScientific } from '@/lib/utils';
+import { Formula } from '@/components/Formula';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface ReactantInput {
     mol: Molecule;
     coeff: number;
     value: number;
-    unit: 'g' | 'mol' | 'molecules';
+    unit: Unit;
 }
 
 interface LimitingReactantResultsProps {
     reactants: ReactantInput[];
     products: { mol: Molecule; coeff: number }[];
     targetProductIndex: number;
-    targetUnit: 'g' | 'mol' | 'molecules';
+    targetUnit: Unit;
 }
-
-const AVOGADRO = 6.022e23;
-
-const Formula = ({ html }: { html: string }) => (
-    <span dangerouslySetInnerHTML={{ __html: html }} />
-);
-
-const formatScientific = (num: number) => {
-    if (num === 0) return "0";
-    const expString = num.toExponential(3);
-    const [coefficient, exponent] = expString.split('e');
-    const expVal = parseInt(exponent, 10);
-    return <span>{coefficient} × 10<sup>{expVal}</sup></span>;
-};
-
-const convertToMoles = (value: number, unit: string, molarMass: number): number => {
-    if (unit === 'mol') return value;
-    if (unit === 'g') return value / molarMass;
-    return value / AVOGADRO; // molecules
-};
 
 export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = ({
     reactants,
@@ -44,11 +27,10 @@ export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = (
     targetProductIndex,
     targetUnit,
 }) => {
-    // 1. Calculate moles for each reactant
     const reactantData = reactants.map((r) => {
         const mm = calculateMolarMass(r.mol).totalMass;
         const moles = convertToMoles(r.value, r.unit, mm);
-        const ratio = moles / r.coeff; // Mole ratio (moles / coefficient)
+        const ratio = moles / r.coeff;
         return {
             ...r,
             molarMass: mm,
@@ -58,19 +40,15 @@ export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = (
         };
     });
 
-    // 2. Find Limiting Reactant (Lowest Ratio)
     reactantData.sort((a, b) => a.ratio - b.ratio);
     const limitingReactant = reactantData[0];
 
-    // 3. Calculate Theoretical Yield
     const target = products[targetProductIndex];
     const targetMM = calculateMolarMass(target.mol).totalMass;
     const targetFormulaHtml = formatMolecule(target.mol);
 
-    // Moles of product = Moles of Limiting Reactant * (Coeff Product / Coeff Limiting)
     const molesOfProduct = limitingReactant.moles * (target.coeff / limitingReactant.coeff);
 
-    // 4. Convert to Target Unit
     let displayValue: number | React.ReactNode = 0;
     let unitLabel = '';
 
@@ -80,7 +58,7 @@ export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = (
     } else if (targetUnit === 'g') {
         displayValue = molesOfProduct * targetMM;
         unitLabel = 'g';
-    } else { // molecules
+    } else {
         displayValue = molesOfProduct * AVOGADRO;
         unitLabel = 'molecules';
     }
@@ -127,7 +105,7 @@ export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = (
                     </table>
                 </div>
                 <p className="text-xs text-slate-500 mt-2">
-                    * The reactant with the smallest "Moles / Coeff" ratio is the limiting reactant.
+                    * The reactant with the smallest &quot;Moles / Coeff&quot; ratio is the limiting reactant.
                 </p>
             </div>
 

@@ -4,26 +4,29 @@ import React, { useState } from 'react';
 import { Plus, ArrowDown, Trash2, Beaker } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { LimitingReactantResults } from '@/components/LimitingReactantResults';
-import { Molecule, formatMoleculePlainText } from '@/lib/chemistryEngine';
+import { Molecule, formatMoleculePlainText, Unit } from '@/lib/chemistryEngine';
+import { createEmptyMolecule } from '@/lib/utils';
 
-const createEmptyMolecule = (): Molecule => ({ id: Math.random().toString(36).substr(2, 9), parts: [] });
+interface ReactantInput {
+    mol: Molecule;
+    coeff: number;
+    value: number;
+    unit: Unit;
+}
 
 export default function LimitingReactantPage() {
-    // Reactants: Array of { mol, coeff, value, unit }
-    const [reactants, setReactants] = useState([
-        { mol: createEmptyMolecule(), coeff: 1, value: 10, unit: 'g' as 'g' | 'mol' | 'molecules' }
+    const [reactants, setReactants] = useState<ReactantInput[]>([
+        { mol: createEmptyMolecule(), coeff: 1, value: 10, unit: 'g' }
     ]);
 
-    // Products: Array of { mol, coeff }
-    const [products, setProducts] = useState([
+    const [products, setProducts] = useState<{ mol: Molecule; coeff: number }[]>([
         { mol: createEmptyMolecule(), coeff: 1 }
     ]);
 
     const [targetProductIdx, setTargetProductIdx] = useState(0);
-    const [targetUnit, setTargetUnit] = useState<'g' | 'mol' | 'molecules'>('g'); // New state
+    const [targetUnit, setTargetUnit] = useState<Unit>('g');
     const [showResults, setShowResults] = useState(false);
 
-    // Handlers
     const addReactant = () => {
         setReactants([...reactants, { mol: createEmptyMolecule(), coeff: 1, value: 0, unit: 'g' }]);
     };
@@ -90,7 +93,7 @@ export default function LimitingReactantPage() {
                                             value={r.unit}
                                             onChange={(e) => {
                                                 const newR = [...reactants];
-                                                newR[idx].unit = e.target.value as any;
+                                                newR[idx].unit = e.target.value as Unit;
                                                 setReactants(newR);
                                             }}
                                             className="px-3 py-2 border border-slate-200 rounded-lg shadow-sm bg-white text-sm"
@@ -107,6 +110,7 @@ export default function LimitingReactantPage() {
                                             <button
                                                 onClick={() => removeReactant(idx)}
                                                 className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 shadow-sm"
+                                                title="Remove Reactant"
                                             >
                                                 <Trash2 size={14} />
                                             </button>
@@ -162,6 +166,7 @@ export default function LimitingReactantPage() {
                                         <button
                                             onClick={() => removeProduct(idx)}
                                             className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 shadow-sm"
+                                            title="Remove Product"
                                         >
                                             <Trash2 size={14} />
                                         </button>
@@ -201,11 +206,10 @@ export default function LimitingReactantPage() {
                             ))}
                         </select>
 
-                        {/* New Unit Selector */}
                         <span className="text-sm font-medium text-slate-700 ml-2">in:</span>
                         <select
                             value={targetUnit}
-                            onChange={(e) => setTargetUnit(e.target.value as any)}
+                            onChange={(e) => setTargetUnit(e.target.value as Unit)}
                             className="px-3 py-2 border border-slate-200 rounded-lg shadow-sm bg-white text-sm"
                         >
                             <option value="g">grams</option>

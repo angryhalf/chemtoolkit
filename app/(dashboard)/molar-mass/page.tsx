@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Atom } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
-
-const createEmptyMolecule = (): Molecule => ({ id: Math.random().toString(36).substr(2, 9), parts: [] });
+import { createEmptyMolecule } from '@/lib/utils';
+import { CopyButton } from '@/components/CopyButton';
 
 export default function MolarMassPage() {
   const [massMolecule, setMassMolecule] = useState<Molecule>(createEmptyMolecule());
@@ -34,11 +34,14 @@ export default function MolarMassPage() {
       {massResult && (
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="font-bold text-slate-700 mb-4">Results</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-700">Results</h3>
+              <CopyButton text={`${massResult.totalMass.toFixed(3)} g/mol`} />
+            </div>
             <div className="text-4xl font-bold text-blue-600 mb-4">
               {massResult.totalMass.toFixed(3)} <span className="text-xl text-slate-500 font-normal">g/mol</span>
             </div>
-            <h4 className="font-semibold text-slate-600 mb-2 border-t pt-4">Percent Composition</h4>
+            <h4 className="font-semibold text-slate-600 mb-2 border-t border-slate-200 pt-4">Percent Composition</h4>
             <ul className="space-y-2">
               {massResult.composition.map(c => (
                 <li key={c.symbol} className="flex justify-between items-center text-sm">
@@ -56,8 +59,11 @@ export default function MolarMassPage() {
             <h3 className="font-bold text-slate-700 mb-4">Step-by-Step Solution</h3>
             <div className="bg-slate-50 p-4 rounded-lg font-mono text-xs text-slate-600 space-y-1 border border-slate-100">
               {massResult.steps.map((step, i) => (
-                <div key={i} className={step.startsWith('   ') ? 'pl-4' : 'font-semibold text-slate-700 mt-2'}>
-                  {step}
+                <div 
+                  key={i} 
+                  className={step.type === 'calculation' ? 'pl-4' : step.type === 'info' ? 'font-semibold text-slate-700 mt-2' : 'font-semibold text-blue-700 mt-2'}
+                >
+                  {step.text}
                 </div>
               ))}
             </div>

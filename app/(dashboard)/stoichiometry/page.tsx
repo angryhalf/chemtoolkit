@@ -1,35 +1,37 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Plus, ArrowDown, Trash2, Sigma } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { StoichiometryGrid } from '@/components/StoichiometryGrid';
-import { Molecule, formatMoleculePlainText } from '@/lib/chemistryEngine';
+import { Molecule, formatMoleculePlainText, Unit } from '@/lib/chemistryEngine';
+import { createEmptyMolecule } from '@/lib/utils';
 
-const createEmptyMolecule = (): Molecule => ({ id: Math.random().toString(36).substr(2, 9), parts: [] });
+const createEmptyMoleculeLocal = (): Molecule => createEmptyMolecule();
+
+interface StoichResult {
+    coefficients: number[];
+    reactants: Molecule[];
+    products: Molecule[];
+}
 
 export default function StoichiometryPage() {
-    const [stoichReactants, setStoichReactants] = useState<Molecule[]>([createEmptyMolecule()]);
-    const [stoichProducts, setStoichProducts] = useState<Molecule[]>([createEmptyMolecule()]);
+    const [stoichReactants, setStoichReactants] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
+    const [stoichProducts, setStoichProducts] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
 
-    // State for Coefficients
     const [reactantCoeffs, setReactantCoeffs] = useState<number[]>([1]);
     const [productCoeffs, setProductCoeffs] = useState<number[]>([1]);
 
-    // State for Inputs
     const [knownMolIdx, setKnownMolIdx] = useState(0);
     const [knownValue, setKnownValue] = useState(10);
-    const [knownUnit, setKnownUnit] = useState<'g' | 'mol' | 'molecules'>('g');
+    const [knownUnit, setKnownUnit] = useState<Unit>('g');
 
     const [targetMolIdx, setTargetMolIdx] = useState(1);
-    const [targetUnit, setTargetUnit] = useState<'g' | 'mol' | 'molecules'>('g');
+    const [targetUnit, setTargetUnit] = useState<Unit>('g');
 
-    const [stoichResult, setStoichResult] = useState<any>(null);
+    const [stoichResult, setStoichResult] = useState<StoichResult | null>(null);
 
-    // --- Updated Handlers ---
-
-    const handleStoich = () => {
-        // Simply use the user-provided coefficients
+    const handleStoich = useCallback(() => {
         const allCoeffs = [...reactantCoeffs, ...productCoeffs];
 
         setStoichResult({
@@ -37,34 +39,33 @@ export default function StoichiometryPage() {
             reactants: stoichReactants,
             products: stoichProducts,
         });
-    };
+    }, [reactantCoeffs, productCoeffs, stoichReactants, stoichProducts]);
 
-    const updateMolList = (list: Molecule[], index: number, newMol: Molecule, setter: Function) => {
+    const updateMolList = useCallback((list: Molecule[], index: number, newMol: Molecule, setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
         const newList = [...list];
         newList[index] = newMol;
         setter(newList);
-    };
+    }, []);
 
-    const updateCoeffList = (list: number[], index: number, value: string, setter: Function) => {
+    const updateCoeffList = useCallback((list: number[], index: number, value: string, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
         const newList = [...list];
-        const parsed = parseInt(value);
-        newList[index] = isNaN(parsed) || parsed < 1 ? 1 : parsed; // Default to 1 if invalid
+        const parsed = parseInt(value, 10);
+        newList[index] = isNaN(parsed) || parsed < 1 ? 1 : parsed;
         setter(newList);
-    };
+    }, []);
 
-    const addMolecule = (list: Molecule[], setter: Function, coeffList: number[], coeffSetter: Function) => {
-        setter([...list, createEmptyMolecule()]);
-        coeffSetter([...coeffList, 1]); // Add default coeff 1
-    };
+    const addMolecule = useCallback((list: Molecule[], setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
+        setter([...list, createEmptyMoleculeLocal()]);
+        coeffSetter([...coeffList, 1]);
+    }, []);
 
-    const removeMolecule = (list: Molecule[], index: number, setter: Function, coeffList: number[], coeffSetter: Function) => {
+    const removeMolecule = useCallback((list: Molecule[], index: number, setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
         if (list.length > 1) {
             setter(list.filter((_, i) => i !== index));
             coeffSetter(coeffList.filter((_, i) => i !== index));
         }
-    };
+    }, []);
 
-    // Recalculate dropdown options
     const allMolecules = [...stoichReactants, ...stoichProducts];
 
     return (
@@ -174,7 +175,7 @@ export default function StoichiometryPage() {
                             />
                             <select
                                 value={knownUnit}
-                                onChange={e => setKnownUnit(e.target.value as any)}
+                                onChange={e => setKnownUnit(e.target.value as Unit)}
                                 className="px-3 py-2 border border-slate-200 rounded-lg shadow-sm bg-white"
                             >
                                 <option value="g">grams (g)</option>
@@ -203,7 +204,7 @@ export default function StoichiometryPage() {
 
                             <select
                                 value={targetUnit}
-                                onChange={e => setTargetUnit(e.target.value as any)}
+                                onChange={e => setTargetUnit(e.target.value as Unit)}
                                 className="px-3 py-2 border border-slate-200 rounded-lg shadow-sm bg-white"
                             >
                                 <option value="g">grams (g)</option>
@@ -246,10 +247,8 @@ export default function StoichiometryPage() {
                     knownMolIndex={knownMolIdx}
                     knownValue={knownValue}
                     knownUnit={knownUnit}
-                    knownIsReactant={knownMolIdx < stoichReactants.length}
                     targetMolIndex={targetMolIdx}
                     targetUnit={targetUnit}
-                    targetIsReactant={targetMolIdx < stoichReactants.length}
                 />
             )}
         </div>
