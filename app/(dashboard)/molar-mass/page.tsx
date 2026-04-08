@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { Atom } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
@@ -9,8 +8,12 @@ import { CopyButton } from '@/components/CopyButton';
 import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
 import { SigFigSelector } from '@/components/SigFigSelector';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 export default function MolarMassPage() {
+  const pageConfig = usePageConfig();
+  const theme = usePageTheme(pageConfig);
+  
   const [massMolecule, setMassMolecule] = useState<Molecule>(createEmptyMolecule());
   const [massResult, setMassResult] = useState<ReturnType<typeof calculateMolarMass> | null>(null);
   const { settings } = useSigFigs();
@@ -25,14 +28,24 @@ export default function MolarMassPage() {
   return (
     <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-xl font-semibold mb-4 text-slate-800">Molar Mass Calculator</h2>
+        <div className="flex items-center gap-3 mb-4">
+          {pageConfig && (
+            <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+              <pageConfig.icon size={24} />
+            </div>
+          )}
+          <h2 className="text-xl font-semibold text-slate-800">
+            {pageConfig?.title || 'Molar Mass Calculator'}
+          </h2>
+        </div>
+        
         <MoleculeBuilder molecule={massMolecule} onChange={setMassMolecule} />
         <div className="mt-4 flex justify-end">
           <button
             onClick={handleCalcMass}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+            className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
           >
-            <Atom size={18} /> Calculate Molar Mass
+            {pageConfig && <pageConfig.icon size={18} />} Calculate Molar Mass
           </button>
         </div>
       </div>
@@ -47,7 +60,7 @@ export default function MolarMassPage() {
             <div className="mb-4">
               <SigFigSelector compact />
             </div>
-            <div className="text-4xl font-bold text-blue-600 mb-4">
+            <div className={`text-4xl font-bold mb-4 ${theme.resultColor}`}>
               <SigFigDisplay value={massResult.totalMass} sigFigs={sigFigs} unit="g/mol" />
             </div>
             <h4 className="font-semibold text-slate-600 mb-2 border-t border-slate-200 pt-4">Percent Composition</h4>
@@ -56,7 +69,7 @@ export default function MolarMassPage() {
                 <li key={c.symbol} className="flex justify-between items-center text-sm">
                   <span className="font-medium text-slate-700">{c.symbol}</span>
                   <div className="w-full bg-slate-100 h-2 rounded-full mx-4 overflow-hidden">
-                    <div className="bg-blue-400 h-full rounded-full" style={{ width: `${c.percentage}%` }}></div>
+                    <div className={`${theme.bgColor.replace('bg-', 'bg-').replace('-50', '-400')} h-full rounded-full`} style={{ width: `${c.percentage}%` }}></div>
                   </div>
                   <span className="text-slate-500">{c.percentage.toFixed(2)}%</span>
                 </li>
@@ -70,7 +83,7 @@ export default function MolarMassPage() {
               {massResult.steps.map((step, i) => (
                 <div 
                   key={i} 
-                  className={step.type === 'calculation' ? 'pl-4' : step.type === 'info' ? 'font-semibold text-slate-700 mt-2' : 'font-semibold text-blue-700 mt-2'}
+                  className={step.type === 'calculation' ? 'pl-4' : step.type === 'info' ? `font-semibold ${theme.stepHighlight} mt-2` : `font-semibold ${theme.stepHighlight} mt-2`}
                 >
                   {step.text}
                 </div>

@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { Plus, ArrowDown, Trash2, Scale } from 'lucide-react';
+import { Plus, ArrowDown, Trash2 } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, formatMolecule, balanceEquation } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 export default function BalancerPage() {
+    const pageConfig = usePageConfig();
+    const theme = usePageTheme(pageConfig);
     const [reactants, setReactants] = useState<Molecule[]>([createEmptyMolecule()]);
     const [products, setProducts] = useState<Molecule[]>([createEmptyMolecule()]);
 
@@ -65,7 +68,16 @@ export default function BalancerPage() {
     return (
         <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-slate-800">Equation Balancer</h2>
+                <div className="flex items-center gap-3 mb-4">
+                    {pageConfig && (
+                        <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+                            <pageConfig.icon size={24} />
+                        </div>
+                    )}
+                    <h2 className="text-xl font-semibold text-slate-800">
+                        {pageConfig?.title || 'Equation Balancer'}
+                    </h2>
+                </div>
 
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-500 mb-2">Reactants</label>
@@ -132,9 +144,9 @@ export default function BalancerPage() {
                 <div className="flex justify-end">
                     <button
                         onClick={handleBalance}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2"
+                        className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
                     >
-                        <Scale size={18} /> Balance Equation
+                        {pageConfig && <pageConfig.icon size={18} />} Balance Equation
                     </button>
                 </div>
             </div>
@@ -147,13 +159,13 @@ export default function BalancerPage() {
 
             {balancedResult && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className="font-bold text-slate-700 mb-4 text-xl">Balanced Equation</h3>
-                    <div className="bg-slate-50 p-4 rounded-lg text-center text-2xl font-mono text-slate-800 border border-slate-100 overflow-x-auto whitespace-nowrap">
+                    <h3 className={`font-bold mb-4 text-xl ${theme.textColor}`}>Balanced Equation</h3>
+                    <div className={`bg-slate-50 p-4 rounded-lg text-center text-2xl font-mono text-slate-800 border border-slate-100 overflow-x-auto whitespace-nowrap`}>
                         <span className="mr-2">
                             {balancedResult.reactants.map((mol, i) => (
                                 <React.Fragment key={i}>
                                     {i > 0 && <span className="text-slate-400 mx-2">+</span>}
-                                    <span className="font-bold text-blue-700">{getReactantCoeffs()[i] > 1 ? getReactantCoeffs()[i] : ''}</span>
+                                    <span className={`font-bold ${theme.resultColor}`}>{getReactantCoeffs()[i] > 1 ? getReactantCoeffs()[i] : ''}</span>
                                     <span dangerouslySetInnerHTML={{ __html: formatMolecule(mol) }} />
                                 </React.Fragment>
                             ))}
@@ -163,7 +175,7 @@ export default function BalancerPage() {
                             {balancedResult.products.map((mol, i) => (
                                 <React.Fragment key={i}>
                                     {i > 0 && <span className="text-slate-400 mx-2">+</span>}
-                                    <span className="font-bold text-teal-700">{getProductCoeffs()[i] > 1 ? getProductCoeffs()[i] : ''}</span>
+                                    <span className={`font-bold ${theme.resultColor}`}>{getProductCoeffs()[i] > 1 ? getProductCoeffs()[i] : ''}</span>
                                     <span dangerouslySetInnerHTML={{ __html: formatMolecule(mol) }} />
                                 </React.Fragment>
                             ))}

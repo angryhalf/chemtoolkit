@@ -10,10 +10,13 @@ import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
 import { SigFigSelector } from '@/components/SigFigSelector';
 import { parseSigFigsFromInput, roundToSigFigs } from '@/lib/sigfigs';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 type CalculationType = 'molarity' | 'moles' | 'volume' | 'mass';
 
 export default function MolarityPage() {
+  const pageConfig = usePageConfig();
+  const theme = usePageTheme(pageConfig);
   const [calcType, setCalcType] = useState<CalculationType>('molarity');
   const [molecule, setMolecule] = useState<Molecule>(createEmptyMolecule());
   const [mass, setMass] = useState('');

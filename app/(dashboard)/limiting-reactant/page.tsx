@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, ArrowDown, Trash2, Beaker } from 'lucide-react';
+import { Plus, ArrowDown, Trash2 } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { LimitingReactantResults } from '@/components/LimitingReactantResults';
 import { Molecule, formatMoleculePlainText, Unit } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 interface ReactantInput {
     mol: Molecule;
@@ -14,6 +15,8 @@ interface ReactantInput {
 }
 
 export default function LimitingReactantPage() {
+    const pageConfig = usePageConfig();
+    const theme = usePageTheme(pageConfig);
     const [reactants, setReactants] = useState<ReactantInput[]>([
         { mol: createEmptyMolecule(), value: 10, unit: 'g' }
     ]);
@@ -53,7 +56,16 @@ export default function LimitingReactantPage() {
     return (
         <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-slate-800">Limiting Reactant Calculator</h2>
+                <div className="flex items-center gap-3 mb-4">
+                    {pageConfig && (
+                        <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+                            <pageConfig.icon size={24} />
+                        </div>
+                    )}
+                    <h2 className="text-xl font-semibold text-slate-800">
+                        {pageConfig?.title || 'Limiting Reactant Calculator'}
+                    </h2>
+                </div>
 
                 {/* Reactants Section */}
                 <div className="mb-6">
@@ -193,9 +205,9 @@ export default function LimitingReactantPage() {
 
                     <button
                         onClick={handleCalculate}
-                        className="px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition shadow-sm flex items-center gap-2"
+                        className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
                     >
-                        <Beaker size={18} /> Calculate Yield
+                        {pageConfig && <pageConfig.icon size={18} />} Calculate Yield
                     </button>
                 </div>
             </div>
