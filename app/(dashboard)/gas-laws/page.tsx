@@ -140,6 +140,9 @@ export default function GasLawsPage() {
     if (useScientific) {
       return val.toExponential(calcSigFigs - 1);
     }
+    if (absVal === 0) {
+      return '0';
+    }
     const d = Math.ceil(Math.log10(absVal));
     const decimals = Math.max(0, calcSigFigs - d);
     return val.toFixed(decimals);
