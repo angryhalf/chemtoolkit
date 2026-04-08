@@ -5,6 +5,8 @@ import { Molecule, formatMolecule, calculateMolarMass } from '@/lib/chemistryEng
 import { AVOGADRO } from '@/lib/utils';
 import { formatScientific } from '@/lib/utils';
 import { Formula } from '@/components/Formula';
+import { useSigFigs } from '@/lib/SigFigContext';
+import { parseSigFigsFromInput } from '@/lib/sigfigs';
 
 interface StoichiometryGridProps {
   reactants: Molecule[];
@@ -24,6 +26,7 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   knownMolIndex, knownValue, knownUnit,
   targetMolIndex, targetUnit
 }) => {
+  const { settings, resolveSigFigs } = useSigFigs();
 
   const allMols = [...reactants, ...products];
   const molarMasses = allMols.map(m => calculateMolarMass(m).totalMass);
@@ -36,6 +39,8 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   const targetMM = molarMasses[targetMolIndex];
   const targetFormulaHtml = getFormulaHtml(allMols[targetMolIndex]);
 
+  const knownInputSigFigs = parseSigFigsFromInput(knownValue.toString()).sigFigs || 3;
+
   let knownMoles = 0;
   let step1Top: React.ReactNode = null;
   let step1Bottom: React.ReactNode = null;
@@ -47,7 +52,7 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
   } else if (knownUnit === 'g') {
     knownMoles = knownValue / knownMM;
     step1Top = <span className="text-blue-600 font-bold">{knownValue} g <Formula html={knownFormulaHtml} /></span>;
-    step1Bottom = <span>{knownMM.toFixed(3)} g <Formula html={knownFormulaHtml} /></span>;
+    step1Bottom = <span>{knownMM.toFixed(4)} g <Formula html={knownFormulaHtml} /></span>;
   } else {
     knownMoles = knownValue / AVOGADRO;
     step1Top = <span className="text-blue-600 font-bold">{formatScientific(knownValue)} molecules <Formula html={knownFormulaHtml} /></span>;
@@ -68,7 +73,7 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
     unitLabel = 'mol';
   } else if (targetUnit === 'g') {
     targetValue = targetMoles * targetMM;
-    step3Top = <span>{targetMM.toFixed(3)} g <Formula html={targetFormulaHtml} /></span>;
+    step3Top = <span>{targetMM.toFixed(4)} g <Formula html={targetFormulaHtml} /></span>;
     step3Bottom = <span className="text-teal-600 font-bold">1 mol <Formula html={targetFormulaHtml} /></span>;
     unitLabel = 'g';
   } else {
@@ -78,12 +83,20 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
     unitLabel = 'molecules';
   }
 
+  const calcSigFigs = resolveSigFigs(knownInputSigFigs);
+
+  const formatResultValue = (val: number) => {
+    if (settings.mode === 'disabled') {
+      return val.toFixed(3);
+    }
+    return val.toExponential(calcSigFigs - 1);
+  };
+
   const cellClass = "px-4 py-3 text-center align-middle border-r-2 border-slate-200 last:border-r-0";
 
   return (
     <div className="space-y-6">
 
-      {/* 1. Summary Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
         <table className="w-full text-sm text-left text-slate-600">
           <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
@@ -110,7 +123,7 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
               <td className="px-4 py-3 font-medium text-slate-900">Molar Mass</td>
               {molarMasses.map((mm, i) => (
                 <td key={i} className="px-4 py-3 border-l border-slate-200 text-center font-mono">
-                  {mm.toFixed(3)} g/mol
+                  {mm.toFixed(4)} g/mol
                 </td>
               ))}
             </tr>
@@ -118,14 +131,12 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
         </table>
       </div>
 
-      {/* 2. Dimensional Analysis Grid */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Dimensional Analysis</h3>
 
         <div className="overflow-x-auto pb-2">
           <table className="w-full border-collapse">
             <tbody>
-              {/* Top Row: Numerators */}
               <tr>
                 <td className={`${cellClass} font-bold text-slate-800 border-b-2 border-slate-300`}>
                   {step1Top}
@@ -148,11 +159,10 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
                 )}
 
                 <td className={`${cellClass} font-bold text-slate-800 border-b-2 border-slate-300`}>
-                  = {targetUnit === 'molecules' ? formatScientific(targetValue) : targetValue.toFixed(3)} {unitLabel}
+                  = {targetUnit === 'molecules' ? formatResultValue(targetValue) : targetValue.toFixed(3)} {unitLabel}
                 </td>
               </tr>
 
-              {/* Bottom Row: Denominators */}
               <tr>
                 <td className={`${cellClass} h-10`}></td>
 
@@ -178,24 +188,25 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
           </table>
         </div>
 
-        {/* Explanation Steps */}
         <div className="mt-6 pt-4 border-t border-slate-100 space-y-3 text-sm text-slate-600">
           <p><strong className="text-slate-700">1.</strong> Start with <span className="font-semibold">{knownUnit === 'molecules' ? formatScientific(knownValue) : knownValue} {knownUnit}</span> of <Formula html={knownFormulaHtml} />.</p>
           {knownUnit !== 'mol' && (
-            <p><strong className="text-slate-700">2.</strong> Convert to moles using {knownUnit === 'g' ? `molar mass (${knownMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
+            <p><strong className="text-slate-700">2.</strong> Convert to moles using {knownUnit === 'g' ? `molar mass (${knownMM.toFixed(4)} g/mol)` : 'Avogadro\'s number'}.</p>
           )}
           <p><strong className="text-slate-700">{knownUnit === 'mol' ? '2' : '3'}.</strong> Use the mole ratio (<strong>{targetCoeff}:{knownCoeff}</strong>) to convert to moles of <Formula html={targetFormulaHtml} />.</p>
           {targetUnit !== 'mol' && (
-            <p><strong className="text-slate-700">{knownUnit === 'mol' ? '3' : '4'}.</strong> Convert moles to {targetUnit} using {targetUnit === 'g' ? `molar mass (${targetMM.toFixed(3)} g/mol)` : 'Avogadro\'s number'}.</p>
+            <p><strong className="text-slate-700">{knownUnit === 'mol' ? '3' : '4'}.</strong> Convert moles to {targetUnit} using {targetUnit === 'g' ? `molar mass (${targetMM.toFixed(4)} g/mol)` : 'Avogadro\'s number'}.</p>
           )}
         </div>
 
-        {/* Final Result Box */}
         <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 text-center">
           <span className="text-sm text-slate-500 block mb-1">Final Answer</span>
           <span className="text-2xl font-bold text-slate-800">
-            {targetUnit === 'molecules' ? formatScientific(targetValue) : targetValue.toFixed(3)} {targetUnit} <Formula html={targetFormulaHtml} />
+            {targetUnit === 'molecules' ? formatResultValue(targetValue) : targetValue.toFixed(3)} {targetUnit} <Formula html={targetFormulaHtml} />
           </span>
+          {settings.mode !== 'disabled' && (
+            <span className="text-xs text-slate-400 ml-2">({calcSigFigs} sig figs)</span>
+          )}
         </div>
       </div>
     </div>

@@ -6,15 +6,20 @@ import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
 import { CopyButton } from '@/components/CopyButton';
+import { useSigFigs } from '@/lib/SigFigContext';
+import { SigFigDisplay } from '@/components/SigFigDisplay';
 
 export default function MolarMassPage() {
   const [massMolecule, setMassMolecule] = useState<Molecule>(createEmptyMolecule());
   const [massResult, setMassResult] = useState<ReturnType<typeof calculateMolarMass> | null>(null);
+  const { settings } = useSigFigs();
 
   const handleCalcMass = () => {
     const res = calculateMolarMass(massMolecule);
     setMassResult(res);
   };
+
+  const sigFigs = settings.mode === 'disabled' ? 4 : 5;
 
   return (
     <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
@@ -36,10 +41,10 @@ export default function MolarMassPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-700">Results</h3>
-              <CopyButton text={`${massResult.totalMass.toFixed(3)} g/mol`} />
+              <CopyButton text={`${massResult.totalMass.toFixed(4)} g/mol`} />
             </div>
             <div className="text-4xl font-bold text-blue-600 mb-4">
-              {massResult.totalMass.toFixed(3)} <span className="text-xl text-slate-500 font-normal">g/mol</span>
+              <SigFigDisplay value={massResult.totalMass} sigFigs={sigFigs} unit="g/mol" />
             </div>
             <h4 className="font-semibold text-slate-600 mb-2 border-t border-slate-200 pt-4">Percent Composition</h4>
             <ul className="space-y-2">

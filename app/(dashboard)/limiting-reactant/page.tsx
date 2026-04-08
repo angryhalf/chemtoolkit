@@ -9,18 +9,17 @@ import { createEmptyMolecule } from '@/lib/utils';
 
 interface ReactantInput {
     mol: Molecule;
-    coeff: number;
     value: number;
     unit: Unit;
 }
 
 export default function LimitingReactantPage() {
     const [reactants, setReactants] = useState<ReactantInput[]>([
-        { mol: createEmptyMolecule(), coeff: 1, value: 10, unit: 'g' }
+        { mol: createEmptyMolecule(), value: 10, unit: 'g' }
     ]);
 
-    const [products, setProducts] = useState<{ mol: Molecule; coeff: number }[]>([
-        { mol: createEmptyMolecule(), coeff: 1 }
+    const [products, setProducts] = useState<Molecule[]>([
+        createEmptyMolecule()
     ]);
 
     const [targetProductIdx, setTargetProductIdx] = useState(0);
@@ -28,7 +27,7 @@ export default function LimitingReactantPage() {
     const [showResults, setShowResults] = useState(false);
 
     const addReactant = () => {
-        setReactants([...reactants, { mol: createEmptyMolecule(), coeff: 1, value: 0, unit: 'g' }]);
+        setReactants([...reactants, { mol: createEmptyMolecule(), value: 0, unit: 'g' }]);
     };
 
     const removeReactant = (index: number) => {
@@ -38,7 +37,7 @@ export default function LimitingReactantPage() {
     };
 
     const addProduct = () => {
-        setProducts([...products, { mol: createEmptyMolecule(), coeff: 1 }]);
+        setProducts([...products, createEmptyMolecule()]);
     };
 
     const removeProduct = (index: number) => {
@@ -62,19 +61,6 @@ export default function LimitingReactantPage() {
                     <div className="space-y-4">
                         {reactants.map((r, idx) => (
                             <div key={idx} className="relative flex items-start gap-2">
-                                {/* Coefficient */}
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={r.coeff}
-                                    onChange={(e) => {
-                                        const newR = [...reactants];
-                                        newR[idx].coeff = parseInt(e.target.value) || 1;
-                                        setReactants(newR);
-                                    }}
-                                    className="w-12 text-center px-2 py-2 mt-7 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50"
-                                />
-
                                 <div className="flex-1 space-y-2">
                                     {/* Inputs Row */}
                                     <div className="flex gap-2 items-center">
@@ -148,19 +134,6 @@ export default function LimitingReactantPage() {
                     <div className="space-y-4">
                         {products.map((p, idx) => (
                             <div key={idx} className="relative flex items-center gap-2">
-                                {/* Coefficient */}
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={p.coeff}
-                                    onChange={(e) => {
-                                        const newP = [...products];
-                                        newP[idx].coeff = parseInt(e.target.value) || 1;
-                                        setProducts(newP);
-                                    }}
-                                    className="w-12 text-center px-2 py-2 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50"
-                                />
-
                                 <div className="flex-1 relative">
                                     {products.length > 1 && (
                                         <button
@@ -173,10 +146,10 @@ export default function LimitingReactantPage() {
                                     )}
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                                         <MoleculeBuilder
-                                            molecule={p.mol}
+                                            molecule={p}
                                             onChange={(m) => {
                                                 const newP = [...products];
-                                                newP[idx].mol = m;
+                                                newP[idx] = m;
                                                 setProducts(newP);
                                             }}
                                         />
@@ -201,7 +174,7 @@ export default function LimitingReactantPage() {
                         >
                             {products.map((p, i) => (
                                 <option key={i} value={i}>
-                                    {formatMoleculePlainText(p.mol) || `Product ${i + 1}`}
+                                    {formatMoleculePlainText(p) || `Product ${i + 1}`}
                                 </option>
                             ))}
                         </select>

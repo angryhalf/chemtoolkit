@@ -3,7 +3,7 @@ import { AVOGADRO, Unit } from './utils';
 
 export type { Unit };
 export type MoleculePart = { type: 'element'; symbol: string; count: number } | { type: 'group'; parts: MoleculePart[]; count: number };
-export interface Molecule { id: string; parts: MoleculePart[] }
+export interface Molecule { id: string; parts: MoleculePart[]; count: number }
 export interface CompositionResult { totalMass: number; composition: ElementComposition[]; steps: CalculationStep[]; }
 export interface ElementComposition { symbol: string; mass: number; percentage: number; count: number; atomicMass: number; }
 export interface BalanceResult { coefficients: number[]; balancedEquation: string; steps: CalculationStep[]; }
@@ -31,16 +31,23 @@ export interface GasLawResult {
   unit: string;
   steps: CalculationStep[];
   formula: string;
-  variables: { symbol: string; value: number; unit: string }[];
+  variables: { symbol: string; value: number; unit: string; sigFigs: number }[];
+  sigFigs: number;
 }
 
 const R = 0.082057; // L·atm/(mol·K)
 
-const formatValue = (v: number): string => {
-  if (Math.abs(v) >= 1e6 || (Math.abs(v) < 1e-4 && v !== 0)) {
-    return v.toExponential(4);
+const formatValue = (v: number, sigFigs: number = 4): string => {
+  if (v === 0) return '0';
+  if (!isFinite(v)) return v.toString();
+  const absVal = Math.abs(v);
+  const useScientific = absVal >= 1e6 || (absVal < 1e-3 && absVal !== 0);
+  if (useScientific) {
+    return v.toExponential(sigFigs - 1);
   }
-  return v.toFixed(4);
+  const d = Math.ceil(Math.log10(absVal));
+  const decimals = Math.max(0, sigFigs - d);
+  return v.toFixed(decimals);
 };
 
 export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
@@ -65,14 +72,41 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
   let value = 0;
   let formula = '';
   let unit = '';
-  const variables: { symbol: string; value: number; unit: string }[] = [];
+  const variables: { symbol: string; value: number; unit: string; sigFigs: number }[] = [];
+  const inputSigFigs: number[] = [];
 
-  if (pressure !== undefined) variables.push({ symbol: 'P1', value: pressure, unit: pressureUnit });
-  if (volume !== undefined) variables.push({ symbol: 'V1', value: volume, unit: volumeUnit });
-  if (temperature !== undefined) variables.push({ symbol: 'T1', value: temperature, unit: temperatureUnit });
-  if (p2 !== undefined) variables.push({ symbol: 'P2', value: p2, unit: pressureUnit });
-  if (v2 !== undefined) variables.push({ symbol: 'V2', value: v2, unit: volumeUnit });
-  if (t2 !== undefined) variables.push({ symbol: 'T2', value: t2, unit: temperatureUnit });
+  if (pressure !== undefined) {
+    const sf = pressure.toString().includes('.') ? pressure.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : pressure.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'P1', value: pressure, unit: pressureUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+  if (volume !== undefined) {
+    const sf = volume.toString().includes('.') ? volume.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : volume.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'V1', value: volume, unit: volumeUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+  if (temperature !== undefined) {
+    const sf = temperature.toString().includes('.') ? temperature.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : temperature.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'T1', value: temperature, unit: temperatureUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+  if (p2 !== undefined) {
+    const sf = p2.toString().includes('.') ? p2.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : p2.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'P2', value: p2, unit: pressureUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+  if (v2 !== undefined) {
+    const sf = v2.toString().includes('.') ? v2.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : v2.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'V2', value: v2, unit: volumeUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+  if (t2 !== undefined) {
+    const sf = t2.toString().includes('.') ? t2.toString().replace(/^-/, '').replace('.', '').replace(/^0+/, '').length : t2.toString().replace(/^-/, '').replace(/0+$/, '').length;
+    variables.push({ symbol: 'T2', value: t2, unit: temperatureUnit, sigFigs: sf || 3 });
+    inputSigFigs.push(sf || 3);
+  }
+
+  const resultSigFigs = inputSigFigs.length > 0 ? Math.min(...inputSigFigs.filter(s => s > 0)) : 4;
 
   switch (law) {
     case 'boyle':
@@ -83,8 +117,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = 'P1V1 = P2V2';
         const v2Calc = (P1 * V1) / P2;
         steps.push({ text: `V2 = (P1 * V1) / P2`, type: 'calculation' });
-        steps.push({ text: `V2 = (${formatValue(P1)} * ${formatValue(V1)}) / ${formatValue(P2)}`, type: 'calculation' });
-        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        steps.push({ text: `V2 = (${formatValue(P1, resultSigFigs)} * ${formatValue(V1, resultSigFigs)}) / ${formatValue(P2, resultSigFigs)}`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc, resultSigFigs)} L`, type: 'result' });
         value = fromL(v2Calc);
       } else if (P1 !== undefined && V1 !== undefined && V2 !== undefined) {
         unknown = 'Final Pressure (P2)';
@@ -92,8 +126,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = 'P1V1 = P2V2';
         const p2Calc = (P1 * V1) / V2;
         steps.push({ text: `P2 = (P1 * V1) / V2`, type: 'calculation' });
-        steps.push({ text: `P2 = (${formatValue(P1)} * ${formatValue(V1)}) / ${formatValue(V2)}`, type: 'calculation' });
-        steps.push({ text: `P2 = ${formatValue(p2Calc)} atm`, type: 'result' });
+        steps.push({ text: `P2 = (${formatValue(P1, resultSigFigs)} * ${formatValue(V1, resultSigFigs)}) / ${formatValue(V2, resultSigFigs)}`, type: 'calculation' });
+        steps.push({ text: `P2 = ${formatValue(p2Calc, resultSigFigs)} atm`, type: 'result' });
         value = fromAtm(p2Calc);
       }
       break;
@@ -106,8 +140,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = 'V1/T1 = V2/T2';
         const v2Calc = (V1 * T2) / T1;
         steps.push({ text: `V2 = (V1 * T2) / T1`, type: 'calculation' });
-        steps.push({ text: `V2 = (${formatValue(V1)} * ${formatValue(T2)} K) / ${formatValue(T1)} K`, type: 'calculation' });
-        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        steps.push({ text: `V2 = (${formatValue(V1, resultSigFigs)} * ${formatValue(T2, resultSigFigs)} K) / ${formatValue(T1, resultSigFigs)} K`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc, resultSigFigs)} L`, type: 'result' });
         value = fromL(v2Calc);
       } else if (V1 !== undefined && T1 !== undefined && V2 !== undefined) {
         unknown = 'Final Temperature (T2)';
@@ -115,8 +149,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = 'V1/T1 = V2/T2';
         const t2Calc = (V2 * T1) / V1;
         steps.push({ text: `T2 = (V2 * T1) / V1`, type: 'calculation' });
-        steps.push({ text: `T2 = (${formatValue(V2)} * ${formatValue(T1)} K) / ${formatValue(V1)}`, type: 'calculation' });
-        steps.push({ text: `T2 = ${formatValue(t2Calc)} K`, type: 'result' });
+        steps.push({ text: `T2 = (${formatValue(V2, resultSigFigs)} * ${formatValue(T1, resultSigFigs)} K) / ${formatValue(V1, resultSigFigs)}`, type: 'calculation' });
+        steps.push({ text: `T2 = ${formatValue(t2Calc, resultSigFigs)} K`, type: 'result' });
         value = fromK(t2Calc);
       }
       break;
@@ -129,8 +163,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = '(P1V1)/T1 = (P2V2)/T2';
         const t2Calc = (P2 * V2 * T1) / (P1 * V1);
         steps.push({ text: `T2 = (P2 * V2 * T1) / (P1 * V1)`, type: 'calculation' });
-        steps.push({ text: `T2 = (${formatValue(P2)} * ${formatValue(V2)} * ${formatValue(T1)}) / (${formatValue(P1)} * ${formatValue(V1)})`, type: 'calculation' });
-        steps.push({ text: `T2 = ${formatValue(t2Calc)} K`, type: 'result' });
+        steps.push({ text: `T2 = (${formatValue(P2, resultSigFigs)} * ${formatValue(V2, resultSigFigs)} * ${formatValue(T1, resultSigFigs)}) / (${formatValue(P1, resultSigFigs)} * ${formatValue(V1, resultSigFigs)})`, type: 'calculation' });
+        steps.push({ text: `T2 = ${formatValue(t2Calc, resultSigFigs)} K`, type: 'result' });
         value = fromK(t2Calc);
       } else if (P1 !== undefined && V1 !== undefined && T1 !== undefined && P2 !== undefined && T2 !== undefined) {
         unknown = 'Final Volume (V2)';
@@ -138,8 +172,8 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = '(P1V1)/T1 = (P2V2)/T2';
         const v2Calc = (P1 * V1 * T2) / (P2 * T1);
         steps.push({ text: `V2 = (P1 * V1 * T2) / (P2 * T1)`, type: 'calculation' });
-        steps.push({ text: `V2 = (${formatValue(P1)} * ${formatValue(V1)} * ${formatValue(T2)} K) / (${formatValue(P2)} * ${formatValue(T1)} K)`, type: 'calculation' });
-        steps.push({ text: `V2 = ${formatValue(v2Calc)} L`, type: 'result' });
+        steps.push({ text: `V2 = (${formatValue(P1, resultSigFigs)} * ${formatValue(V1, resultSigFigs)} * ${formatValue(T2, resultSigFigs)} K) / (${formatValue(P2, resultSigFigs)} * ${formatValue(T1, resultSigFigs)} K)`, type: 'calculation' });
+        steps.push({ text: `V2 = ${formatValue(v2Calc, resultSigFigs)} L`, type: 'result' });
         value = fromL(v2Calc);
       } else if (P1 !== undefined && V1 !== undefined && T1 !== undefined && V2 !== undefined && T2 !== undefined) {
         unknown = 'Final Pressure (P2)';
@@ -147,14 +181,14 @@ export const calculateGasLaw = (input: GasLawInput): GasLawResult => {
         formula = '(P1V1)/T1 = (P2V2)/T2';
         const p2Calc = (P1 * V1 * T2) / (V2 * T1);
         steps.push({ text: `P2 = (P1 * V1 * T2) / (V2 * T1)`, type: 'calculation' });
-        steps.push({ text: `P2 = (${formatValue(P1)} * ${formatValue(V1)} * ${formatValue(T2)} K) / (${formatValue(V2)} * ${formatValue(T1)} K)`, type: 'calculation' });
-        steps.push({ text: `P2 = ${formatValue(p2Calc)} atm`, type: 'result' });
+        steps.push({ text: `P2 = (${formatValue(P1, resultSigFigs)} * ${formatValue(V1, resultSigFigs)} * ${formatValue(T2, resultSigFigs)} K) / (${formatValue(V2, resultSigFigs)} * ${formatValue(T1, resultSigFigs)} K)`, type: 'calculation' });
+        steps.push({ text: `P2 = ${formatValue(p2Calc, resultSigFigs)} atm`, type: 'result' });
         value = fromAtm(p2Calc);
       }
       break;
   }
 
-  return { unknown, value, unit, steps, formula, variables };
+  return { unknown, value, unit, steps, formula, variables, sigFigs: resultSigFigs };
 };
 
 const getLawName = (law: GasLaw): string => {
@@ -189,13 +223,13 @@ export const calculateMolarMass = (mol: Molecule): CompositionResult => {
         const mass = el.mass * count;
         totalMass += mass;
         composition.push({ symbol: sym, mass, count, atomicMass: el.mass, percentage: 0 });
-        steps.push({ text: `   - ${sym}: ${count} × ${el.mass} = ${mass.toFixed(3)} g/mol`, type: 'calculation' });
+        steps.push({ text: `   - ${sym}: ${count} × ${el.mass} = ${mass.toFixed(4)} g/mol`, type: 'calculation' });
     });
 
     steps.push({ text: '2. Sum subtotals to get Total Molar Mass.', type: 'info' });
-    steps.push({ text: `   Total = ${totalMass.toFixed(3)} g/mol`, type: 'result' });
+    steps.push({ text: `   Total = ${totalMass.toFixed(4)} g/mol`, type: 'result' });
     steps.push({ text: '3. Calculate percent composition.', type: 'info' });
-    composition.forEach(c => { c.percentage = (c.mass / totalMass) * 100; steps.push({ text: `   - ${c.symbol}: (${c.mass.toFixed(3)} / ${totalMass.toFixed(3)}) × 100 = ${c.percentage.toFixed(2)}%`, type: 'calculation' }); });
+    composition.forEach(c => { c.percentage = (c.mass / totalMass) * 100; steps.push({ text: `   - ${c.symbol}: (${c.mass.toFixed(4)} / ${totalMass.toFixed(4)}) × 100 = ${c.percentage.toFixed(2)}%`, type: 'calculation' }); });
     return { totalMass, composition, steps };
 };
 

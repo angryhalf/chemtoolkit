@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { SigFigProvider } from '@/lib/SigFigContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full m-0 p-0 bg-slate-50 text-slate-800`}>
-        {children}
+        <SigFigProvider>
+          {children}
+        </SigFigProvider>
       </body>
     </html>
   );

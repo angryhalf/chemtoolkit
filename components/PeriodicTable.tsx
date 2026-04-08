@@ -56,7 +56,7 @@ const ElementCell: React.FC<ElementCellProps> = memo(({ element, onSelect }) => 
             aria-label={`${element.name}, atomic number ${element.number}, ${element.mass} g/mol`}
         >
             <span className="text-xs font-bold text-slate-700">{element.symbol}</span>
-            <span className="text-[8px] text-slate-400">{element.number}</span>
+            <span className="text-[8px] text-slate-400">{element.mass}</span>
         </button>
     );
 });

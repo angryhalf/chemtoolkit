@@ -1,36 +1,165 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
-import { X, Plus, Minus, Parentheses } from 'lucide-react';
-import { Element } from '@/data/elements';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { X, Plus, Minus } from 'lucide-react';
+import { Element as ChemElement, elementMap } from '@/data/elements';
 import { PeriodicTable } from './PeriodicTable';
 import { Molecule, MoleculePart } from '@/lib/chemistryEngine';
-import { isValidElementSymbol } from '@/lib/utils';
 
 interface MoleculeBuilderProps {
     molecule: Molecule;
     onChange: (molecule: Molecule) => void;
 }
 
+const parseFormula = (formula: string): MoleculePart[] => {
+    const parts: MoleculePart[] = [];
+    
+    const parseGroup = (str: string): MoleculePart[] => {
+        const groupParts: MoleculePart[] = [];
+        let i = 0;
+        
+        while (i < str.length) {
+            if (str[i] === '(') {
+                let depth = 1;
+                let j = i + 1;
+                while (j < str.length && depth > 0) {
+                    if (str[j] === '(') depth++;
+                    if (str[j] === ')') depth--;
+                    j++;
+                }
+                const groupContent = str.slice(i + 1, j - 1);
+                let countStr = '';
+                while (j < str.length && /\d/.test(str[j])) {
+                    countStr += str[j];
+                    j++;
+                }
+                const groupCount = countStr ? parseInt(countStr, 10) : 1;
+                
+                const innerParts = parseGroup(groupContent);
+                if (innerParts.length > 0) {
+                    groupParts.push({ type: 'group', parts: innerParts, count: groupCount });
+                }
+                i = j;
+            } else if (/[A-Z]/.test(str[i])) {
+                let symbol = str[i];
+                let j = i + 1;
+                while (j < str.length && /[a-z]/.test(str[j])) {
+                    symbol += str[j];
+                    j++;
+                }
+                
+                if (elementMap.has(symbol)) {
+                    let countStr = '';
+                    while (j < str.length && /\d/.test(str[j])) {
+                        countStr += str[j];
+                        j++;
+                    }
+                    const count = countStr ? parseInt(countStr, 10) : 1;
+                    groupParts.push({ type: 'element', symbol, count });
+                }
+                i = j;
+            } else {
+                i++;
+            }
+        }
+        
+        return groupParts;
+    };
+    
+    return parseGroup(formula);
+};
+
+const formatPart = (part: MoleculePart): string => {
+    if (part.type === 'element') {
+        return part.count > 1 ? `${part.symbol}${part.count}` : part.symbol;
+    } else {
+        const inner = part.parts.map(formatPart).join('');
+        return part.count > 1 ? `(${inner})${part.count}` : `(${inner})`;
+    }
+};
+
 export const MoleculeBuilder: React.FC<MoleculeBuilderProps> = ({ molecule, onChange }) => {
-    const [activeGroupIndex, setActiveGroupIndex] = useState<number | null>(null);
-    const [elementInput, setElementInput] = useState('');
+    const [inputValue, setInputValue] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleElementSelect = useCallback((element: Element) => {
-        const newPart: MoleculePart = { type: 'element', symbol: element.symbol, count: 1 };
-        onChange({
-            ...molecule,
-            parts: [...molecule.parts, newPart]
-        });
+    const updateCount = useCallback((count: number) => {
+        onChange({ ...molecule, count: Math.max(1, count) });
     }, [molecule, onChange]);
 
-    const handleAddGroup = useCallback(() => {
-        const newPart: MoleculePart = { type: 'group', parts: [], count: 1 };
-        onChange({
-            ...molecule,
-            parts: [...molecule.parts, newPart]
-        });
+    const parseAndAddElements = useCallback((value: string) => {
+        const trimmed = value.trim();
+        let moleculeCount = 1;
+        let formula = trimmed;
+        
+        const countMatch = trimmed.match(/^(\d+)(.+)$/);
+        if (countMatch && !elementMap.has(countMatch[1])) {
+            moleculeCount = parseInt(countMatch[1], 10);
+            formula = countMatch[2];
+        }
+        
+        if (!formula.trim()) return;
+        
+        const newParts = parseFormula(formula);
+        
+        if (newParts.length > 0) {
+            const existingCounts = new Map<string, number>();
+            const existingGroupCounts: MoleculePart[] = [];
+            
+            molecule.parts.forEach(part => {
+                if (part.type === 'element') {
+                    existingCounts.set(part.symbol, (existingCounts.get(part.symbol) || 0) + part.count);
+                } else {
+                    existingGroupCounts.push(part);
+                }
+            });
+            
+            const newPartsMap = new Map<string, number>();
+            newParts.forEach(part => {
+                if (part.type === 'element') {
+                    newPartsMap.set(part.symbol, (newPartsMap.get(part.symbol) || 0) + part.count);
+                }
+            });
+            
+            const finalParts: MoleculePart[] = [];
+            
+            existingGroupCounts.forEach(g => finalParts.push(g));
+            
+            molecule.parts.forEach(part => {
+                if (part.type === 'element' && !newPartsMap.has(part.symbol)) {
+                    finalParts.push(part);
+                }
+            });
+            
+            newParts.forEach(part => {
+                if (part.type === 'element') {
+                    const existing = existingCounts.get(part.symbol) || 0;
+                    finalParts.push({ type: 'element', symbol: part.symbol, count: existing + part.count });
+                } else {
+                    finalParts.push(part);
+                }
+            });
+            
+            const finalCount = moleculeCount;
+            onChange({ ...molecule, parts: finalParts, count: finalCount });
+            setInputValue('');
+        }
     }, [molecule, onChange]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            parseAndAddElements(inputValue);
+        }
+    }, [inputValue, parseAndAddElements]);
+
+    useEffect(() => {
+        const lastChar = inputValue.slice(-1);
+        if (/^\d$/.test(lastChar)) {
+            const secondLast = inputValue.slice(-2, -1);
+            if (secondLast && /[A-Z]/.test(secondLast)) {
+                parseAndAddElements(inputValue);
+            }
+        }
+    }, [inputValue, parseAndAddElements]);
 
     const updatePartCount = useCallback((index: number, delta: number) => {
         const newParts = [...molecule.parts];
@@ -45,145 +174,108 @@ export const MoleculeBuilder: React.FC<MoleculeBuilderProps> = ({ molecule, onCh
         onChange({ ...molecule, parts: newParts });
     }, [molecule, onChange]);
 
-    const addElementToGroup = useCallback((groupIndex: number, symbol: string) => {
-        const newParts = [...molecule.parts];
-        const group = newParts[groupIndex] as { type: 'group'; parts: MoleculePart[]; count: number };
-        group.parts.push({ type: 'element', symbol, count: 1 });
-        onChange({ ...molecule, parts: newParts });
-        setActiveGroupIndex(null);
-        setElementInput('');
-    }, [molecule, onChange]);
-
-    const updateGroupChildCount = useCallback((groupIndex: number, childIndex: number, delta: number) => {
-        const newParts = [...molecule.parts];
-        const group = newParts[groupIndex] as { type: 'group'; parts: MoleculePart[]; count: number };
-        const child = group.parts[childIndex];
-        child.count = Math.max(1, child.count + delta);
-        onChange({ ...molecule, parts: newParts });
-    }, [molecule, onChange]);
-
-    const removeGroupChild = useCallback((groupIndex: number, childIndex: number) => {
-        const newParts = [...molecule.parts];
-        const group = newParts[groupIndex] as { type: 'group'; parts: MoleculePart[]; count: number };
-        group.parts = group.parts.filter((_, i) => i !== childIndex);
-        onChange({ ...molecule, parts: newParts });
-    }, [molecule, onChange]);
-
-    const handleElementInputSubmit = (groupIndex: number) => {
-        const symbol = elementInput.trim().toUpperCase();
-        if (symbol && isValidElementSymbol(symbol)) {
-            addElementToGroup(groupIndex, symbol);
+    const handleElementSelect = useCallback((element: ChemElement) => {
+        const existingIndex = molecule.parts.findIndex(p => p.type === 'element' && p.symbol === element.symbol);
+        
+        if (existingIndex >= 0) {
+            const newParts = [...molecule.parts];
+            newParts[existingIndex] = { ...newParts[existingIndex], count: newParts[existingIndex].count + 1 };
+            onChange({ ...molecule, parts: newParts });
+        } else {
+            const newPart: MoleculePart = { type: 'element', symbol: element.symbol, count: 1 };
+            onChange({
+                ...molecule,
+                parts: [...molecule.parts, newPart]
+            });
         }
+        inputRef.current?.focus();
+    }, [molecule, onChange]);
+
+    const getFormulaDisplay = (): string => {
+        return molecule.parts.map(formatPart).join('');
     };
 
     return (
         <div className="space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[80px] shadow-sm">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                    {molecule.parts.length === 0 && (
-                        <span className="text-slate-400 text-sm italic">Click elements below to build...</span>
-                    )}
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <button
+                            onClick={() => updateCount(molecule.count - 1)}
+                            className="px-1.5 py-1 hover:bg-slate-100 border-r border-slate-200"
+                            aria-label="Decrease count"
+                        >
+                            <Minus size={14} />
+                        </button>
+                        <input
+                            type="number"
+                            min="1"
+                            value={molecule.count}
+                            onChange={(e) => updateCount(parseInt(e.target.value) || 1)}
+                            className="w-12 text-center py-1 text-sm font-bold text-blue-600 border-0 outline-none"
+                        />
+                        <button
+                            onClick={() => updateCount(molecule.count + 1)}
+                            className="px-1.5 py-1 hover:bg-slate-100 border-l border-slate-200"
+                            aria-label="Increase count"
+                        >
+                            <Plus size={14} />
+                        </button>
+                    </div>
+
+                    <span className="text-lg font-bold text-slate-700">
+                        {getFormulaDisplay() || <span className="text-slate-400 italic">formula</span>}
+                    </span>
+
+                    <span className="text-slate-400">=</span>
 
                     {molecule.parts.map((part, index) => (
-                        <React.Fragment key={index}>
-                            {part.type === 'element' ? (
-                                <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                                    <button
-                                        onClick={() => removePart(index)}
-                                        className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
-                                        aria-label={`Remove ${part.symbol}`}
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                    <span className="px-2 font-bold text-slate-700">{part.symbol}</span>
-                                    <div className="flex items-center border-l border-slate-200">
-                                        <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
-                                        <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
-                                        <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
-                                    </div>
+                        part.type === 'element' ? (
+                            <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                                <button
+                                    onClick={() => removePart(index)}
+                                    className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
+                                    aria-label={`Remove ${part.symbol}`}
+                                >
+                                    <X size={14} />
+                                </button>
+                                <span className="px-2 font-bold text-slate-700">{part.symbol}</span>
+                                <div className="flex items-center border-l border-slate-200">
+                                    <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
+                                    <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
+                                    <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
                                 </div>
-                            ) : (
-                                <div className="flex items-center bg-white border border-dashed border-slate-300 rounded-lg shadow-sm overflow-hidden">
-                                    <button
-                                        onClick={() => removePart(index)}
-                                        className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200 h-full"
-                                        aria-label="Remove group"
-                                    >
-                                        <X size={14} />
-                                    </button>
-
-                                    <span className="pl-2 text-slate-400">(</span>
-                                    <div className="flex flex-wrap items-center gap-1 px-1 py-1">
-                                        {part.parts.map((child, cIdx) => {
-                                            if (child.type === 'element') {
-                                                return (
-                                                    <div key={cIdx} className="flex items-center bg-slate-50 rounded border border-slate-100 text-xs">
-                                                        <span className="px-1 font-bold">{child.symbol}</span>
-                                                        <div className="flex items-center border-l border-slate-100">
-                                                            <button onClick={() => updateGroupChildCount(index, cIdx, -1)} className="px-0.5 hover:bg-slate-200" aria-label="Decrease count"><Minus size={10} /></button>
-                                                            <span className="font-bold text-blue-600 w-3 text-center">{child.count}</span>
-                                                            <button onClick={() => updateGroupChildCount(index, cIdx, 1)} className="px-0.5 hover:bg-slate-200" aria-label="Increase count"><Plus size={10} /></button>
-                                                            <button onClick={() => removeGroupChild(index, cIdx)} className="px-0.5 hover:bg-red-100 text-red-400" aria-label="Remove element"><X size={10} /></button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        })}
-
-                                        {activeGroupIndex === index ? (
-                                            <div className="flex items-center gap-1">
-                                                <input
-                                                    type="text"
-                                                    value={elementInput}
-                                                    onChange={(e) => setElementInput(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') handleElementInputSubmit(index);
-                                                        if (e.key === 'Escape') {
-                                                            setActiveGroupIndex(null);
-                                                            setElementInput('');
-                                                        }
-                                                    }}
-                                                    placeholder="O, H..."
-                                                    className="w-12 px-1 py-0.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-300 focus:outline-none uppercase"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={() => handleElementInputSubmit(index)}
-                                                    className="px-1 py-0.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
-                                                >
-                                                    Add
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setActiveGroupIndex(index)}
-                                                className="text-slate-300 text-[10px] px-1 cursor-pointer hover:text-blue-500"
-                                                aria-label="Add element to group"
-                                            >
-                                                + Add
-                                            </button>
-                                        )}
-                                    </div>
-                                    <span className="text-slate-400">)</span>
-                                    <div className="flex items-center border-l border-slate-200 bg-slate-50 h-full">
-                                        <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease group count"><Minus size={12} /></button>
-                                        <span className="text-xs font-bold text-purple-600 w-4 text-center">{part.count}</span>
-                                        <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase group count"><Plus size={12} /></button>
-                                    </div>
+                            </div>
+                        ) : (
+                            <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                                <button
+                                    onClick={() => removePart(index)}
+                                    className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
+                                    aria-label="Remove group"
+                                >
+                                    <X size={14} />
+                                </button>
+                                <span className="px-2 font-bold text-slate-700">
+                                    ({part.parts.map(formatPart).join('')}) × {part.count}
+                                </span>
+                                <div className="flex items-center border-l border-slate-200">
+                                    <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
+                                    <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
+                                    <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
                                 </div>
-                            )}
-                        </React.Fragment>
+                            </div>
+                        )
                     ))}
-
-                    {molecule.parts.length > 0 && (
-                        <button
-                            onClick={handleAddGroup}
-                            className="flex items-center gap-1 px-3 py-1 border border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-slate-400 hover:text-slate-500 text-sm"
-                        >
-                            <Parentheses size={14} /> Add Group
-                        </button>
-                    )}
+                    
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={molecule.parts.length === 0 ? "Type formula (e.g. H2O, 2H2O, Cu(NO3)2)..." : ""}
+                        className="flex-1 min-w-[100px] bg-transparent border-0 outline-none text-sm font-mono placeholder:text-slate-400 placeholder:italic"
+                    />
                 </div>
             </div>
 

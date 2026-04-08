@@ -1,6 +1,6 @@
 import { Molecule, MoleculePart } from './chemistryEngine';
 
-export const AVOGADRO = 6.02214076e23;
+export const AVOGADRO = 6.02e23;
 export type Unit = 'g' | 'mol' | 'molecules';
 export const UNITS: { value: Unit; label: string }[] = [
     { value: 'g', label: 'grams (g)' },
@@ -9,8 +9,8 @@ export const UNITS: { value: Unit; label: string }[] = [
 ];
 
 export const generateId = (): string => crypto.randomUUID();
-export const createEmptyMolecule = (): Molecule => ({ id: crypto.randomUUID(), parts: [] });
-export const createMoleculeFromParts = (parts: MoleculePart[]): Molecule => ({ id: crypto.randomUUID(), parts });
+export const createEmptyMolecule = (): Molecule => ({ id: crypto.randomUUID(), parts: [], count: 1 });
+export const createMoleculeFromParts = (parts: MoleculePart[], count: number = 1): Molecule => ({ id: crypto.randomUUID(), parts, count });
 
 const unitToMoles = { g: (v: number, m: number) => v / m, mol: (v: number) => v, molecules: (v: number) => v / AVOGADRO };
 const unitFromMoles = { g: (v: number, m: number) => v * m, mol: (v: number) => v, molecules: (v: number) => v * AVOGADRO };
