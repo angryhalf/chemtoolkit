@@ -8,6 +8,7 @@ import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
 import { SigFigSelector } from '@/components/SigFigSelector';
 import { parseSigFigsFromInput } from '@/lib/sigfigs';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 interface HistoryItem {
   id: string;
@@ -17,6 +18,8 @@ interface HistoryItem {
 }
 
 export default function GasLawsPage() {
+  const pageConfig = usePageConfig();
+  const theme = usePageTheme(pageConfig);
   const [law, setLaw] = useState<GasLaw>('boyle');
   const [pressure1, setPressure1] = useState('');
   const [pressure2, setPressure2] = useState('');
@@ -152,10 +155,14 @@ export default function GasLawsPage() {
     <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-violet-50 text-violet-600 rounded-lg">
-            <Wind size={24} />
-          </div>
-          <h2 className="text-xl font-semibold text-slate-800">Gas Laws Calculator</h2>
+          {pageConfig && (
+            <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+              <pageConfig.icon size={24} />
+            </div>
+          )}
+          <h2 className="text-xl font-semibold text-slate-800">
+            {pageConfig?.title || 'Gas Laws Calculator'}
+          </h2>
         </div>
 
         <div className="mb-6">
@@ -330,9 +337,9 @@ export default function GasLawsPage() {
 
         <button
           onClick={handleCalculate}
-          className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition shadow-sm flex items-center gap-2"
+          className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
         >
-          <Calculator size={18} /> Calculate
+          {pageConfig && <pageConfig.icon size={18} />} Calculate
         </button>
       </div>
 
@@ -340,13 +347,13 @@ export default function GasLawsPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-700">Results</h3>
+              <h3 className={`font-bold ${theme.textColor}`}>Results</h3>
               <CopyButton text={`${formatResult(result.value)} ${result.unit}`} />
             </div>
             <div className="mb-3">
               <SigFigSelector compact />
             </div>
-            <div className="text-4xl font-bold text-violet-600 mb-2">
+            <div className={`text-4xl font-bold mb-2 ${theme.resultColor}`}>
               <SigFigDisplay value={result.value} sigFigs={calcSigFigs} unit={result.unit} />
             </div>
             <p className="text-sm text-slate-500">{result.unknown}</p>
@@ -360,15 +367,15 @@ export default function GasLawsPage() {
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="font-bold text-slate-700 mb-4">Step-by-Step Solution</h3>
+            <h3 className={`font-bold mb-4 ${theme.textColor}`}>Step-by-Step Solution</h3>
             <div className="bg-slate-50 p-4 rounded-lg font-mono text-xs text-slate-600 space-y-1 border border-slate-100">
               {result.steps.map((step, i) => (
                 <div 
                   key={i} 
                   className={
                     step.type === 'calculation' ? 'pl-4 text-slate-500' : 
-                    step.type === 'result' ? 'font-semibold text-violet-700 mt-2' : 
-                    'font-semibold text-slate-700 mt-2'
+                    step.type === 'result' ? `font-semibold ${theme.stepHighlight} mt-2` : 
+                    `font-semibold ${theme.stepHighlight} mt-2`
                   }
                 >
                   {step.text}

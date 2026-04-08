@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { Plus, ArrowDown, Trash2, Sigma } from 'lucide-react';
+import { Plus, ArrowDown, Trash2 } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { StoichiometryGrid } from '@/components/StoichiometryGrid';
 import { Molecule, formatMoleculePlainText, Unit } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
+import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 const createEmptyMoleculeLocal = (): Molecule => createEmptyMolecule();
 
@@ -15,6 +16,8 @@ interface StoichResult {
 }
 
 export default function StoichiometryPage() {
+    const pageConfig = usePageConfig();
+    const theme = usePageTheme(pageConfig);
     const [stoichReactants, setStoichReactants] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
     const [stoichProducts, setStoichProducts] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
 
@@ -61,7 +64,16 @@ export default function StoichiometryPage() {
     return (
         <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-xl font-semibold mb-4 text-slate-800">Stoichiometry Calculator</h2>
+                <div className="flex items-center gap-3 mb-4">
+                    {pageConfig && (
+                        <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+                            <pageConfig.icon size={24} />
+                        </div>
+                    )}
+                    <h2 className="text-xl font-semibold text-slate-800">
+                        {pageConfig?.title || 'Stoichiometry Calculator'}
+                    </h2>
+                </div>
 
                 {/* Reactants */}
                 <div className="mb-6">
@@ -199,9 +211,9 @@ export default function StoichiometryPage() {
                     <div className="flex justify-end">
                         <button
                             onClick={handleStoich}
-                            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition shadow-sm flex items-center gap-2"
+                            className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
                         >
-                            <Sigma size={18} /> Calculate Stoichiometry
+                            {pageConfig && <pageConfig.icon size={18} />} Calculate Stoichiometry
                         </button>
                     </div>
                 </div>
