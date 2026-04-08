@@ -34,34 +34,13 @@ export const SigFigDisplay: React.FC<SigFigDisplayProps> = ({ value, sigFigs, un
     );
   }
 
-  if (!settings.highlightUncertain || sigFigs <= 0) {
-    return (
-      <span className={className}>
-        {formatSigFigs(value, sigFigs)}{unit ? ` ${unit}` : ''}
-      </span>
-    );
-  }
-
   const d = Math.ceil(Math.log10(absVal));
   const decimals = Math.max(0, sigFigs - d);
   const fixedStr = value.toFixed(decimals);
-  const parts = fixedStr.split('.');
-  const intPart = parts[0];
-  const decPart = parts[1] || '';
-
-  const uncertainCount = Math.max(1, decPart.length > 0 ? 1 : 0);
-  const certainDecimals = Math.max(0, decPart.length - uncertainCount);
-
+  
   return (
     <span className={className}>
-      {intPart}
-      {decPart.length > 0 && (
-        <>
-          .{decPart.slice(0, certainDecimals)}
-          <span className="text-amber-600 font-semibold">{decPart.slice(certainDecimals)}</span>
-        </>
-      )}
-      {unit ? ` ${unit}` : ''}
+      {fixedStr}{unit ? ` ${unit}` : ''}
     </span>
   );
 };

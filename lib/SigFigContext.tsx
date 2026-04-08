@@ -7,14 +7,12 @@ export type SigFigMode = 'auto' | 'fixed' | 'disabled';
 export interface SigFigSettings {
   mode: SigFigMode;
   fixedCount: number;
-  highlightUncertain: boolean;
 }
 
 interface SigFigContextType {
   settings: SigFigSettings;
   setMode: (mode: SigFigMode) => void;
   setFixedCount: (count: number) => void;
-  toggleHighlightUncertain: () => void;
   resolveSigFigs: (detectedSigFigs: number) => number;
 }
 
@@ -25,7 +23,6 @@ const STORAGE_KEY = 'chemtoolkit-sigfig-settings';
 const defaultSettings: SigFigSettings = {
   mode: 'auto',
   fixedCount: 3,
-  highlightUncertain: true,
 };
 
 export const SigFigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -51,10 +48,6 @@ export const SigFigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSettings(prev => ({ ...prev, fixedCount: Math.max(1, Math.min(15, count)) }));
   }, []);
 
-  const toggleHighlightUncertain = useCallback(() => {
-    setSettings(prev => ({ ...prev, highlightUncertain: !prev.highlightUncertain }));
-  }, []);
-
   const resolveSigFigs = useCallback((detectedSigFigs: number): number => {
     if (settings.mode === 'disabled') return 4;
     if (settings.mode === 'fixed') return settings.fixedCount;
@@ -62,7 +55,7 @@ export const SigFigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [settings.mode, settings.fixedCount]);
 
   return (
-    <SigFigContext.Provider value={{ settings, setMode, setFixedCount, toggleHighlightUncertain, resolveSigFigs }}>
+    <SigFigContext.Provider value={{ settings, setMode, setFixedCount, resolveSigFigs }}>
       {children}
     </SigFigContext.Provider>
   );

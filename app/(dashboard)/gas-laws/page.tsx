@@ -6,6 +6,7 @@ import { calculateGasLaw, GasLaw, GasLawInput, GasLawResult } from '@/lib/chemis
 import { CopyButton } from '@/components/CopyButton';
 import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
+import { SigFigSelector } from '@/components/SigFigSelector';
 import { parseSigFigsFromInput } from '@/lib/sigfigs';
 
 interface HistoryItem {
@@ -338,6 +339,9 @@ export default function GasLawsPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-700">Results</h3>
               <CopyButton text={`${formatResult(result.value)} ${result.unit}`} />
+            </div>
+            <div className="mb-3">
+              <SigFigSelector compact />
             </div>
             <div className="text-4xl font-bold text-violet-600 mb-2">
               <SigFigDisplay value={result.value} sigFigs={calcSigFigs} unit={result.unit} />

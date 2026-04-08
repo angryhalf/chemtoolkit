@@ -8,6 +8,7 @@ import { createEmptyMolecule } from '@/lib/utils';
 import { CopyButton } from '@/components/CopyButton';
 import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
+import { SigFigSelector } from '@/components/SigFigSelector';
 
 export default function MolarMassPage() {
   const [massMolecule, setMassMolecule] = useState<Molecule>(createEmptyMolecule());
@@ -42,6 +43,9 @@ export default function MolarMassPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-700">Results</h3>
               <CopyButton text={`${massResult.totalMass.toFixed(4)} g/mol`} />
+            </div>
+            <div className="mb-4">
+              <SigFigSelector compact />
             </div>
             <div className="text-4xl font-bold text-blue-600 mb-4">
               <SigFigDisplay value={massResult.totalMass} sigFigs={sigFigs} unit="g/mol" />
