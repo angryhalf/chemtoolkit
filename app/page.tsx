@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Atom, Scale, Sigma, ArrowRight, Beaker, Wind } from 'lucide-react';
+import { Atom, Scale, Sigma, ArrowRight, Beaker, Wind, FlaskConical } from 'lucide-react';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 
 export default function HomePage() {
@@ -95,6 +95,20 @@ export default function HomePage() {
               Calculate using Boyle&apos;s, Charles&apos;s, and Combined Gas Laws
             </p>
             <div className="mt-4 text-violet-600 font-medium text-sm flex items-center gap-1">
+              Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 6: Molarity */}
+          <Link href="/molarity" className="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-200 transition-all flex flex-col">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform">
+              <FlaskConical size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Molarity Calculator</h3>
+            <p className="text-slate-500 text-sm leading-relaxed flex-grow">
+              Calculate molarity, moles, volume, or mass for solution chemistry problems
+            </p>
+            <div className="mt-4 text-emerald-600 font-medium text-sm flex items-center gap-1">
               Open Tool <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>

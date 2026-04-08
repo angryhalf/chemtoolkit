@@ -141,6 +141,9 @@ export const LimitingReactantResults: React.FC<LimitingReactantResultsProps> = (
                 </div>
 
                 <div className="p-6 bg-gradient-to-r from-rose-50 to-orange-50 rounded-lg border border-rose-200 text-center">
+                    <div className="mb-3 flex justify-center">
+                        <SigFigSelector compact />
+                    </div>
                     <span className="text-sm text-slate-500 block mb-1">
                         Final Answer
                     </span>

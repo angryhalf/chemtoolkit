@@ -223,12 +223,6 @@ export const MoleculeBuilder: React.FC<MoleculeBuilderProps> = ({ molecule, onCh
                         </button>
                     </div>
 
-                    <span className="text-lg font-bold text-slate-700">
-                        {getFormulaDisplay() || <span className="text-slate-400 italic">formula</span>}
-                    </span>
-
-                    <span className="text-slate-400">=</span>
-
                     {molecule.parts.map((part, index) => (
                         part.type === 'element' ? (
                             <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
@@ -273,9 +267,18 @@ export const MoleculeBuilder: React.FC<MoleculeBuilderProps> = ({ molecule, onCh
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={molecule.parts.length === 0 ? "Type formula (e.g. H2O, 2H2O, Cu(NO3)2)..." : ""}
-                        className="flex-1 min-w-[100px] bg-transparent border-0 outline-none text-sm font-mono placeholder:text-slate-400 placeholder:italic"
+                        placeholder=""
+                        aria-label="Type formula to add elements"
+                        className="w-0 min-w-0 opacity-0 absolute pointer-events-auto"
                     />
+                    
+                    <button
+                        onClick={() => inputRef.current?.focus()}
+                        className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Click to type formula"
+                    >
+                        + Add by typing
+                    </button>
                 </div>
             </div>
 

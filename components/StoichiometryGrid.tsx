@@ -200,6 +200,9 @@ export const StoichiometryGrid: React.FC<StoichiometryGridProps> = ({
         </div>
 
         <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg border border-blue-200 text-center">
+          <div className="mb-2 flex justify-center">
+            <SigFigSelector compact />
+          </div>
           <span className="text-sm text-slate-500 block mb-1">Final Answer</span>
           <span className="text-2xl font-bold text-slate-800">
             {targetUnit === 'molecules' ? formatResultValue(targetValue) : targetValue.toFixed(3)} {targetUnit} <Formula html={targetFormulaHtml} />
