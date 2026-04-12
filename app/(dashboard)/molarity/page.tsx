@@ -233,12 +233,14 @@ export default function MolarityPage() {
           )}
         </div>
 
-        <button
-          onClick={handleCalculate}
-          className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
-        >
-          {pageConfig && <pageConfig.icon size={18} />} Calculate
-        </button>
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleCalculate}
+            className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
+          >
+            {pageConfig && <pageConfig.icon size={18} />} Calculate
+          </button>
+        </div>
       </div>
 
       {result && (

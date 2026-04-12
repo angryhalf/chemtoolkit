@@ -1,25 +1,26 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { Plus, ArrowDown, Trash2 } from 'lucide-react';
+import { Plus, ArrowDown, Trash2, Sigma } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { StoichiometryGrid } from '@/components/StoichiometryGrid';
 import { Molecule, formatMoleculePlainText, Unit } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
-import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 const createEmptyMoleculeLocal = (): Molecule => createEmptyMolecule();
 
 interface StoichResult {
+    coefficients: number[];
     reactants: Molecule[];
     products: Molecule[];
 }
 
 export default function StoichiometryPage() {
-    const pageConfig = usePageConfig();
-    const theme = usePageTheme(pageConfig);
     const [stoichReactants, setStoichReactants] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
     const [stoichProducts, setStoichProducts] = useState<Molecule[]>([createEmptyMoleculeLocal()]);
+
+    const [reactantCoeffs, setReactantCoeffs] = useState<number[]>([1]);
+    const [productCoeffs, setProductCoeffs] = useState<number[]>([1]);
 
     const [knownMolIdx, setKnownMolIdx] = useState(0);
     const [knownValue, setKnownValue] = useState(10);
@@ -31,11 +32,14 @@ export default function StoichiometryPage() {
     const [stoichResult, setStoichResult] = useState<StoichResult | null>(null);
 
     const handleStoich = useCallback(() => {
+        const allCoeffs = [...reactantCoeffs, ...productCoeffs];
+
         setStoichResult({
+            coefficients: allCoeffs,
             reactants: stoichReactants,
             products: stoichProducts,
         });
-    }, [stoichReactants, stoichProducts]);
+    }, [reactantCoeffs, productCoeffs, stoichReactants, stoichProducts]);
 
     const updateMolList = useCallback((list: Molecule[], index: number, newMol: Molecule, setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
         const newList = [...list];
@@ -43,59 +47,66 @@ export default function StoichiometryPage() {
         setter(newList);
     }, []);
 
-    const addMolecule = useCallback((list: Molecule[], setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
-        setter([...list, createEmptyMoleculeLocal()]);
+    const updateCoeffList = useCallback((list: number[], index: number, value: string, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
+        const newList = [...list];
+        const parsed = parseInt(value, 10);
+        newList[index] = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+        setter(newList);
     }, []);
 
-    const removeMolecule = useCallback((list: Molecule[], index: number, setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
+    const addMolecule = useCallback((list: Molecule[], setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
+        setter([...list, createEmptyMoleculeLocal()]);
+        coeffSetter([...coeffList, 1]);
+    }, []);
+
+    const removeMolecule = useCallback((list: Molecule[], index: number, setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
         if (list.length > 1) {
             setter(list.filter((_, i) => i !== index));
+            coeffSetter(coeffList.filter((_, i) => i !== index));
         }
     }, []);
 
     const allMolecules = [...stoichReactants, ...stoichProducts];
 
-    const getCoefficients = useCallback(() => {
-        const reactantCoeffs = stoichReactants.map(m => m.count);
-        const productCoeffs = stoichProducts.map(m => m.count);
-        return [...reactantCoeffs, ...productCoeffs];
-    }, [stoichReactants, stoichProducts]);
-
     return (
         <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex items-center gap-3 mb-4">
-                    {pageConfig && (
-                        <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
-                            <pageConfig.icon size={24} />
-                        </div>
-                    )}
-                    <h2 className="text-xl font-semibold text-slate-800">
-                        {pageConfig?.title || 'Stoichiometry Calculator'}
-                    </h2>
-                </div>
+                <h2 className="text-xl font-semibold mb-4 text-slate-800">Stoichiometry Calculator</h2>
 
                 {/* Reactants */}
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-500 mb-2">Reactants</label>
                     <div className="space-y-4">
                         {stoichReactants.map((mol, idx) => (
-                            <div key={mol.id} className="relative">
-                                {stoichReactants.length > 1 && (
-                                    <button
-                                        onClick={() => removeMolecule(stoichReactants, idx, setStoichReactants)}
-                                        className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
-                                        title="Remove Reactant"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(stoichReactants, idx, m, setStoichReactants)} />
+                            <div key={mol.id} className="relative flex items-center gap-2">
+                                {/* Coefficient Input */}
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={reactantCoeffs[idx]}
+                                    onChange={(e) => updateCoeffList(reactantCoeffs, idx, e.target.value, setReactantCoeffs)}
+                                    className="w-12 text-center px-2 py-2 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                                />
+
+                                <div className="flex-1 relative">
+                                    {stoichReactants.length > 1 && (
+                                        <button
+                                            onClick={() => removeMolecule(stoichReactants, idx, setStoichReactants, reactantCoeffs, setReactantCoeffs)}
+                                            className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
+                                            title="Remove Reactant"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(stoichReactants, idx, m, setStoichReactants)} />
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
                     <button
-                        onClick={() => addMolecule(stoichReactants, setStoichReactants)}
+                        onClick={() => addMolecule(stoichReactants, setStoichReactants, reactantCoeffs, setReactantCoeffs)}
                         className="mt-3 text-sm text-blue-600 hover:underline flex items-center gap-1"
                     >
                         <Plus size={14} /> Add Reactant
@@ -114,22 +125,35 @@ export default function StoichiometryPage() {
                     <label className="block text-sm font-medium text-slate-500 mb-2">Products</label>
                     <div className="space-y-4">
                         {stoichProducts.map((mol, idx) => (
-                            <div key={mol.id} className="relative">
-                                {stoichProducts.length > 1 && (
-                                    <button
-                                        onClick={() => removeMolecule(stoichProducts, idx, setStoichProducts)}
-                                        className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
-                                        title="Remove Product"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(stoichProducts, idx, m, setStoichProducts)} />
+                            <div key={mol.id} className="relative flex items-center gap-2">
+                                {/* Coefficient Input */}
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={productCoeffs[idx]}
+                                    onChange={(e) => updateCoeffList(productCoeffs, idx, e.target.value, setProductCoeffs)}
+                                    className="w-12 text-center px-2 py-2 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                                />
+
+                                <div className="flex-1 relative">
+                                    {stoichProducts.length > 1 && (
+                                        <button
+                                            onClick={() => removeMolecule(stoichProducts, idx, setStoichProducts, productCoeffs, setProductCoeffs)}
+                                            className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
+                                            title="Remove Product"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(stoichProducts, idx, m, setStoichProducts)} />
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
                     <button
-                        onClick={() => addMolecule(stoichProducts, setStoichProducts)}
+                        onClick={() => addMolecule(stoichProducts, setStoichProducts, productCoeffs, setProductCoeffs)}
                         className="mt-3 text-sm text-blue-600 hover:underline flex items-center gap-1"
                     >
                         <Plus size={14} /> Add Product
@@ -207,9 +231,9 @@ export default function StoichiometryPage() {
                     <div className="flex justify-end">
                         <button
                             onClick={handleStoich}
-                            className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
+                            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition shadow-sm flex items-center gap-2"
                         >
-                            {pageConfig && <pageConfig.icon size={18} />} Calculate Stoichiometry
+                            <Sigma size={18} /> Calculate Stoichiometry
                         </button>
                     </div>
                 </div>
@@ -219,7 +243,7 @@ export default function StoichiometryPage() {
                 <StoichiometryGrid
                     reactants={stoichResult.reactants}
                     products={stoichResult.products}
-                    coefficients={getCoefficients()}
+                    coefficients={stoichResult.coefficients}
                     knownMolIndex={knownMolIdx}
                     knownValue={knownValue}
                     knownUnit={knownUnit}

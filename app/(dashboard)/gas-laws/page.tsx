@@ -4,11 +4,6 @@ import { useState, useEffect } from 'react';
 import { Wind, Calculator, Trash2 } from 'lucide-react';
 import { calculateGasLaw, GasLaw, GasLawInput, GasLawResult } from '@/lib/chemistryEngine';
 import { CopyButton } from '@/components/CopyButton';
-import { useSigFigs } from '@/lib/SigFigContext';
-import { SigFigDisplay } from '@/components/SigFigDisplay';
-import { SigFigSelector } from '@/components/SigFigSelector';
-import { parseSigFigsFromInput } from '@/lib/sigfigs';
-import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 interface HistoryItem {
   id: string;
@@ -18,8 +13,6 @@ interface HistoryItem {
 }
 
 export default function GasLawsPage() {
-  const pageConfig = usePageConfig();
-  const theme = usePageTheme(pageConfig);
   const [law, setLaw] = useState<GasLaw>('boyle');
   const [pressure1, setPressure1] = useState('');
   const [pressure2, setPressure2] = useState('');
@@ -33,7 +26,6 @@ export default function GasLawsPage() {
   const [result, setResult] = useState<GasLawResult | null>(null);
   const [error, setError] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const { settings, resolveSigFigs } = useSigFigs();
 
   useEffect(() => {
     const saved = localStorage.getItem('gasLawsHistory');
@@ -125,44 +117,14 @@ export default function GasLawsPage() {
     return descriptions[l];
   };
 
-  const detectInputSigFigs = (): number => {
-    const inputs = [pressure1, volume1, temp1, pressure2, volume2, temp2].filter(v => v !== '');
-    if (inputs.length === 0) return 3;
-    const sigFigsArr = inputs.map(v => parseSigFigsFromInput(v).sigFigs).filter(s => s > 0);
-    return sigFigsArr.length > 0 ? Math.min(...sigFigsArr) : 3;
-  };
-
-  const calcSigFigs = resolveSigFigs(detectInputSigFigs());
-
-  const formatResult = (val: number) => {
-    if (settings.mode === 'disabled') {
-      return val.toFixed(4);
-    }
-    const absVal = Math.abs(val);
-    const useScientific = absVal >= 1e6 || (absVal < 1e-3 && absVal !== 0);
-    if (useScientific) {
-      return val.toExponential(calcSigFigs - 1);
-    }
-    if (absVal === 0) {
-      return '0';
-    }
-    const d = Math.ceil(Math.log10(absVal));
-    const decimals = Math.max(0, calcSigFigs - d);
-    return val.toFixed(decimals);
-  };
-
   return (
     <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3 mb-4">
-          {pageConfig && (
-            <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
-              <pageConfig.icon size={24} />
-            </div>
-          )}
-          <h2 className="text-xl font-semibold text-slate-800">
-            {pageConfig?.title || 'Gas Laws Calculator'}
-          </h2>
+          <div className="p-2 bg-violet-50 text-violet-600 rounded-lg">
+            <Wind size={24} />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-800">Gas Laws Calculator</h2>
         </div>
 
         <div className="mb-6">
@@ -179,6 +141,7 @@ export default function GasLawsPage() {
           <p className="mt-2 text-sm text-slate-500">{getLawDescription(law)}</p>
         </div>
 
+        {/* Initial Values */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-slate-700 mb-3">Initial Values</h3>
           <div className="grid md:grid-cols-2 gap-4">
@@ -255,6 +218,7 @@ export default function GasLawsPage() {
           </div>
         </div>
 
+        {/* Final Values - show for all laws */}
         {(law === 'boyle' || law === 'charles' || law === 'combined') && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-slate-700 mb-3">Final Values (leave one empty to solve for)</h3>
@@ -337,9 +301,9 @@ export default function GasLawsPage() {
 
         <button
           onClick={handleCalculate}
-          className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
+          className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition shadow-sm flex items-center gap-2"
         >
-          {pageConfig && <pageConfig.icon size={18} />} Calculate
+          <Calculator size={18} /> Calculate
         </button>
       </div>
 
@@ -347,35 +311,29 @@ export default function GasLawsPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`font-bold ${theme.textColor}`}>Results</h3>
-              <CopyButton text={`${formatResult(result.value)} ${result.unit}`} />
+              <h3 className="font-bold text-slate-700">Results</h3>
+              <CopyButton text={`${result.value.toFixed(4)} ${result.unit}`} />
             </div>
-            <div className="mb-3">
-              <SigFigSelector compact />
-            </div>
-            <div className={`text-4xl font-bold mb-2 ${theme.resultColor}`}>
-              <SigFigDisplay value={result.value} sigFigs={calcSigFigs} unit={result.unit} />
+            <div className="text-4xl font-bold text-violet-600 mb-2">
+              {result.value.toFixed(4)} <span className="text-xl text-slate-500 font-normal">{result.unit}</span>
             </div>
             <p className="text-sm text-slate-500">{result.unknown}</p>
             
             <div className="mt-4 pt-4 border-t border-slate-200">
               <p className="text-sm font-medium text-slate-600">Formula: <code className="bg-slate-100 px-2 py-1 rounded">{result.formula}</code></p>
-              {settings.mode !== 'disabled' && (
-                <p className="text-xs text-slate-400 mt-1">Using {calcSigFigs} significant figures</p>
-              )}
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className={`font-bold mb-4 ${theme.textColor}`}>Step-by-Step Solution</h3>
+            <h3 className="font-bold text-slate-700 mb-4">Step-by-Step Solution</h3>
             <div className="bg-slate-50 p-4 rounded-lg font-mono text-xs text-slate-600 space-y-1 border border-slate-100">
               {result.steps.map((step, i) => (
                 <div 
                   key={i} 
                   className={
                     step.type === 'calculation' ? 'pl-4 text-slate-500' : 
-                    step.type === 'result' ? `font-semibold ${theme.stepHighlight} mt-2` : 
-                    `font-semibold ${theme.stepHighlight} mt-2`
+                    step.type === 'result' ? 'font-semibold text-violet-700 mt-2' : 
+                    'font-semibold text-slate-700 mt-2'
                   }
                 >
                   {step.text}
@@ -408,7 +366,7 @@ export default function GasLawsPage() {
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">{item.input.law} Law</span>
                   <span className="text-sm text-slate-500">
-                    {formatResult(item.result.value)} {item.result.unit}
+                    {item.result.value.toFixed(4)} {item.result.unit}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">

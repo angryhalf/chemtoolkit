@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { Plus, ArrowDown, Trash2 } from 'lucide-react';
+import { Plus, ArrowDown, Trash2, Scale } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, formatMolecule, balanceEquation } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
-import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 export default function BalancerPage() {
-    const pageConfig = usePageConfig();
-    const theme = usePageTheme(pageConfig);
     const [reactants, setReactants] = useState<Molecule[]>([createEmptyMolecule()]);
     const [products, setProducts] = useState<Molecule[]>([createEmptyMolecule()]);
 
+    const [reactantCoeffs, setReactantCoeffs] = useState<number[]>([1]);
+    const [productCoeffs, setProductCoeffs] = useState<number[]>([1]);
+
     const [balanceError, setBalanceError] = useState<string | null>(null);
-    const [balancedResult, setBalancedResult] = useState<{ reactants: Molecule[]; products: Molecule[]; coefficients: number[] } | null>(null);
+    const [balancedResult, setBalancedResult] = useState<{ reactants: Molecule[]; products: Molecule[]; reactantCoeffs: number[]; productCoeffs: number[] } | null>(null);
 
     const handleBalance = useCallback(() => {
         setBalanceError(null);
@@ -31,10 +31,16 @@ export default function BalancerPage() {
             setBalancedResult(null);
         } else {
             const res = result.data;
+            const newReactantCoeffs = res.coefficients.slice(0, reactants.length);
+            const newProductCoeffs = res.coefficients.slice(reactants.length);
+
+            setReactantCoeffs(newReactantCoeffs);
+            setProductCoeffs(newProductCoeffs);
             setBalancedResult({
                 reactants,
                 products,
-                coefficients: res.coefficients
+                reactantCoeffs: newReactantCoeffs,
+                productCoeffs: newProductCoeffs
             });
         }
     }, [reactants, products]);
@@ -45,60 +51,62 @@ export default function BalancerPage() {
         setter(newList);
     }, []);
 
-    const addMolecule = useCallback((list: Molecule[], setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
-        setter([...list, createEmptyMolecule()]);
+    const updateCoeffList = useCallback((list: number[], index: number, value: string, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
+        const newList = [...list];
+        const parsed = parseInt(value, 10);
+        newList[index] = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+        setter(newList);
     }, []);
 
-    const removeMolecule = useCallback((list: Molecule[], index: number, setter: React.Dispatch<React.SetStateAction<Molecule[]>>) => {
+    const addMolecule = useCallback((list: Molecule[], setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
+        setter([...list, createEmptyMolecule()]);
+        coeffSetter([...coeffList, 1]);
+    }, []);
+
+    const removeMolecule = useCallback((list: Molecule[], index: number, setter: React.Dispatch<React.SetStateAction<Molecule[]>>, coeffList: number[], coeffSetter: React.Dispatch<React.SetStateAction<number[]>>) => {
         if (list.length > 1) {
             setter(list.filter((_, i) => i !== index));
+            coeffSetter(coeffList.filter((_, i) => i !== index));
         }
     }, []);
-
-    const getReactantCoeffs = () => {
-        if (!balancedResult) return [];
-        return balancedResult.coefficients.slice(0, reactants.length);
-    };
-
-    const getProductCoeffs = () => {
-        if (!balancedResult) return [];
-        return balancedResult.coefficients.slice(reactants.length);
-    };
 
     return (
         <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex items-center gap-3 mb-4">
-                    {pageConfig && (
-                        <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
-                            <pageConfig.icon size={24} />
-                        </div>
-                    )}
-                    <h2 className="text-xl font-semibold text-slate-800">
-                        {pageConfig?.title || 'Equation Balancer'}
-                    </h2>
-                </div>
+                <h2 className="text-xl font-semibold mb-4 text-slate-800">Equation Balancer</h2>
 
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-slate-500 mb-2">Reactants</label>
                     <div className="space-y-4">
                         {reactants.map((mol, idx) => (
-                            <div key={mol.id} className="relative">
-                                {reactants.length > 1 && (
-                                    <button
-                                        onClick={() => removeMolecule(reactants, idx, setReactants)}
-                                        className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
-                                        title="Remove Reactant"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(reactants, idx, m, setReactants)} />
+                            <div key={mol.id} className="relative flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={reactantCoeffs[idx]}
+                                    onChange={(e) => updateCoeffList(reactantCoeffs, idx, e.target.value, setReactantCoeffs)}
+                                    className="w-12 text-center px-2 py-2 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                                />
+
+                                <div className="flex-1 relative">
+                                    {reactants.length > 1 && (
+                                        <button
+                                            onClick={() => removeMolecule(reactants, idx, setReactants, reactantCoeffs, setReactantCoeffs)}
+                                            className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
+                                            title="Remove Reactant"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(reactants, idx, m, setReactants)} />
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
                     <button
-                        onClick={() => addMolecule(reactants, setReactants)}
+                        onClick={() => addMolecule(reactants, setReactants, reactantCoeffs, setReactantCoeffs)}
                         className="mt-3 text-sm text-blue-600 hover:underline flex items-center gap-1"
                     >
                         <Plus size={14} /> Add Reactant
@@ -115,22 +123,34 @@ export default function BalancerPage() {
                     <label className="block text-sm font-medium text-slate-500 mb-2">Products</label>
                     <div className="space-y-4">
                         {products.map((mol, idx) => (
-                            <div key={mol.id} className="relative">
-                                {products.length > 1 && (
-                                    <button
-                                        onClick={() => removeMolecule(products, idx, setProducts)}
-                                        className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
-                                        title="Remove Product"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(products, idx, m, setProducts)} />
+                            <div key={mol.id} className="relative flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={productCoeffs[idx]}
+                                    onChange={(e) => updateCoeffList(productCoeffs, idx, e.target.value, setProductCoeffs)}
+                                    className="w-12 text-center px-2 py-2 border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-600 bg-slate-50 focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                                />
+
+                                <div className="flex-1 relative">
+                                    {products.length > 1 && (
+                                        <button
+                                            onClick={() => removeMolecule(products, idx, setProducts, productCoeffs, setProductCoeffs)}
+                                            className="absolute -left-8 top-3 p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 transition-colors shadow-sm"
+                                            title="Remove Product"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                        <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(products, idx, m, setProducts)} />
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
                     <button
-                        onClick={() => addMolecule(products, setProducts)}
+                        onClick={() => addMolecule(products, setProducts, productCoeffs, setProductCoeffs)}
                         className="mt-3 text-sm text-blue-600 hover:underline flex items-center gap-1"
                     >
                         <Plus size={14} /> Add Product
@@ -140,9 +160,9 @@ export default function BalancerPage() {
                 <div className="flex justify-end">
                     <button
                         onClick={handleBalance}
-                        className={`px-6 py-2 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2"
                     >
-                        {pageConfig && <pageConfig.icon size={18} />} Balance Equation
+                        <Scale size={18} /> Balance Equation
                     </button>
                 </div>
             </div>
@@ -155,13 +175,13 @@ export default function BalancerPage() {
 
             {balancedResult && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 className={`font-bold mb-4 text-xl ${theme.textColor}`}>Balanced Equation</h3>
-                    <div className={`bg-slate-50 p-4 rounded-lg text-center text-2xl font-mono text-slate-800 border border-slate-100 overflow-x-auto whitespace-nowrap`}>
+                    <h3 className="font-bold text-slate-700 mb-4 text-xl">Balanced Equation</h3>
+                    <div className="bg-slate-50 p-4 rounded-lg text-center text-2xl font-mono text-slate-800 border border-slate-100 overflow-x-auto whitespace-nowrap">
                         <span className="mr-2">
                             {balancedResult.reactants.map((mol, i) => (
                                 <React.Fragment key={i}>
                                     {i > 0 && <span className="text-slate-400 mx-2">+</span>}
-                                    <span className={`font-bold ${theme.resultColor}`}>{getReactantCoeffs()[i] > 1 ? getReactantCoeffs()[i] : ''}</span>
+                                    <span className="font-bold text-blue-700">{balancedResult.reactantCoeffs[i] > 1 ? balancedResult.reactantCoeffs[i] : ''}</span>
                                     <span dangerouslySetInnerHTML={{ __html: formatMolecule(mol) }} />
                                 </React.Fragment>
                             ))}
@@ -171,7 +191,7 @@ export default function BalancerPage() {
                             {balancedResult.products.map((mol, i) => (
                                 <React.Fragment key={i}>
                                     {i > 0 && <span className="text-slate-400 mx-2">+</span>}
-                                    <span className={`font-bold ${theme.resultColor}`}>{getProductCoeffs()[i] > 1 ? getProductCoeffs()[i] : ''}</span>
+                                    <span className="font-bold text-teal-700">{balancedResult.productCoeffs[i] > 1 ? balancedResult.productCoeffs[i] : ''}</span>
                                     <span dangerouslySetInnerHTML={{ __html: formatMolecule(mol) }} />
                                 </React.Fragment>
                             ))}
