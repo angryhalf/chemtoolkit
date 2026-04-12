@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { FlaskConical, Calculator } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
@@ -9,7 +8,6 @@ import { CopyButton } from '@/components/CopyButton';
 import { useSigFigs } from '@/lib/SigFigContext';
 import { SigFigDisplay } from '@/components/SigFigDisplay';
 import { SigFigSelector } from '@/components/SigFigSelector';
-import { parseSigFigsFromInput, roundToSigFigs } from '@/lib/sigfigs';
 import { usePageConfig, usePageTheme } from '@/lib/usePageConfig';
 
 type CalculationType = 'molarity' | 'moles' | 'volume' | 'mass';
@@ -139,10 +137,14 @@ export default function MolarityPage() {
     <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-            <FlaskConical size={24} />
-          </div>
-          <h2 className="text-xl font-semibold text-slate-800">Molarity Calculator</h2>
+          {pageConfig && (
+            <div className={`p-2 ${theme.iconBg} ${theme.iconColor} rounded-lg`}>
+              <pageConfig.icon size={24} />
+            </div>
+          )}
+          <h2 className="text-xl font-semibold text-slate-800">
+            {pageConfig?.title || 'Molarity Calculator'}
+          </h2>
         </div>
 
         <div className="mb-6">
@@ -233,9 +235,9 @@ export default function MolarityPage() {
 
         <button
           onClick={handleCalculate}
-          className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition shadow-sm flex items-center gap-2"
+          className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
         >
-          <Calculator size={18} /> Calculate
+          {pageConfig && <pageConfig.icon size={18} />} Calculate
         </button>
       </div>
 

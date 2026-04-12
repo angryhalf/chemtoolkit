@@ -197,89 +197,87 @@ export const MoleculeBuilder: React.FC<MoleculeBuilderProps> = ({ molecule, onCh
 
     return (
         <div className="space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                        <button
-                            onClick={() => updateCount(molecule.count - 1)}
-                            className="px-1.5 py-1 hover:bg-slate-100 border-r border-slate-200"
-                            aria-label="Decrease count"
-                        >
-                            <Minus size={14} />
-                        </button>
-                        <input
-                            type="number"
-                            min="1"
-                            value={molecule.count}
-                            onChange={(e) => updateCount(parseInt(e.target.value) || 1)}
-                            className="w-12 text-center py-1 text-sm font-bold text-blue-600 border-0 outline-none"
-                        />
-                        <button
-                            onClick={() => updateCount(molecule.count + 1)}
-                            className="px-1.5 py-1 hover:bg-slate-100 border-l border-slate-200"
-                            aria-label="Increase count"
-                        >
-                            <Plus size={14} />
-                        </button>
-                    </div>
-
-                    {molecule.parts.map((part, index) => (
-                        part.type === 'element' ? (
-                            <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                                <button
-                                    onClick={() => removePart(index)}
-                                    className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
-                                    aria-label={`Remove ${part.symbol}`}
-                                >
-                                    <X size={14} />
-                                </button>
-                                <span className="px-2 font-bold text-slate-700">{part.symbol}</span>
-                                <div className="flex items-center border-l border-slate-200">
-                                    <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
-                                    <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
-                                    <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                                <button
-                                    onClick={() => removePart(index)}
-                                    className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
-                                    aria-label="Remove group"
-                                >
-                                    <X size={14} />
-                                </button>
-                                <span className="px-2 font-bold text-slate-700">
-                                    ({part.parts.map(formatPart).join('')}) × {part.count}
-                                </span>
-                                <div className="flex items-center border-l border-slate-200">
-                                    <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
-                                    <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
-                                    <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
-                                </div>
-                            </div>
-                        )
-                    ))}
-                    
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder=""
-                        aria-label="Type formula to add elements"
-                        className="w-0 min-w-0 opacity-0 absolute pointer-events-auto"
-                    />
-                    
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
                     <button
-                        onClick={() => inputRef.current?.focus()}
-                        className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Click to type formula"
+                        onClick={() => updateCount(molecule.count - 1)}
+                        className="px-1.5 py-1 hover:bg-slate-100 border-r border-slate-200"
+                        aria-label="Decrease count"
                     >
-                        + Add by typing
+                        <Minus size={14} />
+                    </button>
+                    <input
+                        type="number"
+                        min="1"
+                        value={molecule.count}
+                        onChange={(e) => updateCount(parseInt(e.target.value) || 1)}
+                        className="w-12 text-center py-1 text-sm font-bold text-blue-600 border-0 outline-none"
+                    />
+                    <button
+                        onClick={() => updateCount(molecule.count + 1)}
+                        className="px-1.5 py-1 hover:bg-slate-100 border-l border-slate-200"
+                        aria-label="Increase count"
+                    >
+                        <Plus size={14} />
                     </button>
                 </div>
+
+                {molecule.parts.map((part, index) => (
+                    part.type === 'element' ? (
+                        <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                            <button
+                                onClick={() => removePart(index)}
+                                className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
+                                aria-label={`Remove ${part.symbol}`}
+                            >
+                                <X size={14} />
+                            </button>
+                            <span className="px-2 font-bold text-slate-700">{part.symbol}</span>
+                            <div className="flex items-center border-l border-slate-200">
+                                <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
+                                <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
+                                <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div key={index} className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                            <button
+                                onClick={() => removePart(index)}
+                                className="px-2 py-1 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 border-r border-slate-200"
+                                aria-label="Remove group"
+                            >
+                                <X size={14} />
+                            </button>
+                            <span className="px-2 font-bold text-slate-700">
+                                ({part.parts.map(formatPart).join('')}) × {part.count}
+                            </span>
+                            <div className="flex items-center border-l border-slate-200">
+                                <button onClick={() => updatePartCount(index, -1)} className="px-1 hover:bg-slate-100" aria-label="Decrease count"><Minus size={12} /></button>
+                                <span className="text-xs font-bold text-blue-600 w-4 text-center">{part.count}</span>
+                                <button onClick={() => updatePartCount(index, 1)} className="px-1 hover:bg-slate-100" aria-label="Increase count"><Plus size={12} /></button>
+                            </div>
+                        </div>
+                    )
+                ))}
+                
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder=""
+                    aria-label="Type formula to add elements"
+                    className="w-0 min-w-0 opacity-0 absolute pointer-events-auto"
+                />
+                
+                <button
+                    onClick={() => inputRef.current?.focus()}
+                    className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Click to type formula"
+                >
+                    + Add
+                </button>
             </div>
 
             <PeriodicTable onSelect={handleElementSelect} />

@@ -93,9 +93,7 @@ export default function BalancerPage() {
                                         <Trash2 size={14} />
                                     </button>
                                 )}
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(reactants, idx, m, setReactants)} />
-                                </div>
+                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(reactants, idx, m, setReactants)} />
                             </div>
                         ))}
                     </div>
@@ -127,9 +125,7 @@ export default function BalancerPage() {
                                         <Trash2 size={14} />
                                     </button>
                                 )}
-                                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                    <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(products, idx, m, setProducts)} />
-                                </div>
+                                <MoleculeBuilder molecule={mol} onChange={(m) => updateMolList(products, idx, m, setProducts)} />
                             </div>
                         ))}
                     </div>

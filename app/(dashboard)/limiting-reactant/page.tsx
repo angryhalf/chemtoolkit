@@ -113,16 +113,14 @@ export default function LimitingReactantPage() {
                                                 <Trash2 size={14} />
                                             </button>
                                         )}
-                                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                            <MoleculeBuilder
-                                                molecule={r.mol}
-                                                onChange={(m) => {
-                                                    const newR = [...reactants];
-                                                    newR[idx].mol = m;
-                                                    setReactants(newR);
-                                                }}
-                                            />
-                                        </div>
+                                        <MoleculeBuilder
+                                            molecule={r.mol}
+                                            onChange={(m) => {
+                                                const newR = [...reactants];
+                                                newR[idx].mol = m;
+                                                setReactants(newR);
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -156,16 +154,14 @@ export default function LimitingReactantPage() {
                                             <Trash2 size={14} />
                                         </button>
                                     )}
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                        <MoleculeBuilder
-                                            molecule={p}
-                                            onChange={(m) => {
-                                                const newP = [...products];
-                                                newP[idx] = m;
-                                                setProducts(newP);
-                                            }}
-                                        />
-                                    </div>
+                                    <MoleculeBuilder
+                                        molecule={p}
+                                        onChange={(m) => {
+                                            const newP = [...products];
+                                            newP[idx] = m;
+                                            setProducts(newP);
+                                        }}
+                                    />
                                 </div>
                             </div>
                         ))}
