@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wind, Calculator, Trash2 } from 'lucide-react';
+import { Wind, Trash2 } from 'lucide-react';
 import { calculateGasLaw, GasLaw, GasLawInput, GasLawResult } from '@/lib/chemistryEngine';
 import { CopyButton } from '@/components/CopyButton';
 import { useSigFigs } from '@/lib/SigFigContext';

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { FlaskConical, Calculator } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
 import { MoleculeBuilder } from '@/components/MoleculeBuilder';
 import { Molecule, calculateMolarMass } from '@/lib/chemistryEngine';
 import { createEmptyMolecule } from '@/lib/utils';
@@ -233,9 +233,9 @@ export default function MolarityPage() {
 
         <button
           onClick={handleCalculate}
-          className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition shadow-sm flex items-center gap-2"
+          className={`px-6 py-3 text-white rounded-lg transition shadow-sm flex items-center gap-2 ${theme.buttonBg} ${theme.buttonHover}`}
         >
-          <Calculator size={18} /> Calculate
+          {pageConfig && <pageConfig.icon size={18} />} Calculate
         </button>
       </div>
 
